@@ -12,7 +12,9 @@ class StoreReviewRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        $booking = $this->route('booking');
+
+        return $booking !== null && $booking->user_id === $this->user()?->id && $booking->status === 'completed' && !$booking->review === null;
     }
 
     /**
@@ -23,7 +25,15 @@ class StoreReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'rating.between' => 'The rating must be between 1 and 5.',
         ];
     }
 }
