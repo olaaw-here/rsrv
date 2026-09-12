@@ -21,40 +21,20 @@ use App\Http\Controllers\Api\NotificationController;
 | Controller yang dirujuk di sini BELUM dibuat — ini adalah "kontrak" API
 | yang jadi acuan sebelum controller & service layer diisi (step berikutnya).
 */
-
-// =========================================================================
-// AUTH (public)
-// =========================================================================
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
 
-
-// =========================================================================
-// PUBLIC — Katalog & Kalender (bisa diakses tanpa login, untuk browsing)
-// =========================================================================
 Route::get('/categories', [CategoryController::class, 'index']);
 
 Route::get('/resources', [ResourceController::class, 'index']);              // list + filter/search
 Route::get('/resources/{resource}', [ResourceController::class, 'show']);    // detail resource
-
-// Kalender ketersediaan slot — inti fitur penjadwalan
 Route::get('/resources/{resource}/slots', [TimeSlotController::class, 'index']);
-// contoh query: GET /api/resources/12/slots?date=2026-09-15
-
-
-// =========================================================================
-// PAYMENT GATEWAY WEBHOOK (public, tapi wajib verifikasi signature di controller)
-// =========================================================================
 Route::post('/webhooks/midtrans', [PaymentWebhookController::class, 'handleMidtrans'])
     ->withoutMiddleware(['auth:sanctum']) // tegaskan: endpoint ini publik dari sisi HTTP
     ->name('webhooks.midtrans');
 
-
-// =========================================================================
-// CUSTOMER (wajib login)
-// =========================================================================
 Route::middleware('auth:sanctum')->group(function () {
 
     // Booking
@@ -71,10 +51,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
 
-
-    // =====================================================================
-    // PROVIDER (wajib login + role=provider, dicek via middleware/policy)
-    // =====================================================================
     Route::middleware('role:provider')->prefix('provider')->name('provider.')->group(function () {
 
         // Manajemen resource (tempat/lapangan/jasa) milik provider
