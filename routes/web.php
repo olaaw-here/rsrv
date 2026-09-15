@@ -13,14 +13,7 @@ use App\Http\Controllers\Api\Provider\OperationalHourController;
 use App\Http\Controllers\Api\Provider\ProviderDashboardController;
 use App\Http\Controllers\Api\NotificationController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes — Marketplace Jasa / Booking System
-|--------------------------------------------------------------------------
-| Semua route di file ini di-prefix otomatis dengan /api (bawaan Laravel).
-| Controller yang dirujuk di sini BELUM dibuat — ini adalah "kontrak" API
-| yang jadi acuan sebelum controller & service layer diisi (step berikutnya).
-*/
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
@@ -28,8 +21,8 @@ Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
 
 Route::get('/categories', [CategoryController::class, 'index']);
 
-Route::get('/resources', [ResourceController::class, 'index']);              // list + filter/search
-Route::get('/resources/{resource}', [ResourceController::class, 'show']);    // detail resource
+Route::get('/resources', [ResourceController::class, 'index']);             
+Route::get('/resources/{resource}', [ResourceController::class, 'show']);    
 Route::get('/resources/{resource}/slots', [TimeSlotController::class, 'index']);
 Route::post('/webhooks/midtrans', [PaymentWebhookController::class, 'handleMidtrans'])
     ->withoutMiddleware(['auth:sanctum']) // tegaskan: endpoint ini publik dari sisi HTTP
@@ -38,11 +31,11 @@ Route::post('/webhooks/midtrans', [PaymentWebhookController::class, 'handleMidtr
 Route::middleware('auth:sanctum')->group(function () {
 
     // Booking
-    Route::get('/bookings', [BookingController::class, 'index']);            // riwayat booking saya
-    Route::post('/bookings', [BookingController::class, 'store']);           // buat booking (hold slot + inisiasi payment)
-    Route::get('/bookings/{booking}', [BookingController::class, 'show']);   // detail booking
+    Route::get('/bookings', [BookingController::class, 'index']);            
+    Route::post('/bookings', [BookingController::class, 'store']);           
+    Route::get('/bookings/{booking}', [BookingController::class, 'show']);   
     Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel']);
-    Route::post('/bookings/{booking}/pay', [BookingController::class, 'initiatePayment']); // re-generate Snap Token jika perlu
+    Route::post('/bookings/{booking}/pay', [BookingController::class, 'initiatePayment']); 
 
     // Review (hanya untuk booking milik sendiri yang sudah completed)
     Route::post('/bookings/{booking}/review', [ReviewController::class, 'store']);
