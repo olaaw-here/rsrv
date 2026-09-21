@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class CategoryController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        return response()->json(['message' => 'Not implemented yet'], 501);
+        $categories = Category::orderBy('name')->get('id', 'name', 'slug', 'icon');
+        return response()->json($categories);
     }
 }

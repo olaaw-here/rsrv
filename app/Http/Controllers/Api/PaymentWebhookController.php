@@ -8,8 +8,23 @@ use Illuminate\Http\JsonResponse;
 
 class PaymentWebhookController extends Controller
 {
+    public function __construct(
+        protected PaymentService $paymentService
+    ) {
+    }
+
     public function HandleMidtrans(Request $request): JsonResponse
     {
-        return response()->json(['message' => 'Not implemented yet'], 501);
+        $payload = $request->all();
+
+        if (! $this->paymentService->verifyMidtransSignature($payload)) {
+            Log::warning('Webhook Midtrans signature verification failed', ['order_id' => $payload['order_id'] ?? null,]);
+
+            return response()->json(['message' => 'Invalid signature'], 403);
+        }
+
+        $this->paymentService->handleNotification($payload);
+
+        return response()->json(['message' => 'Webhook received successfully']);
     }
 }

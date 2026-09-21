@@ -14,6 +14,13 @@ class TimeSlotResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id'         => $this->id,
+            'slot_date'  => $this->slot_date->format('Y-m-d'),
+            'start_time' => substr($this->start_time, 0, 5),
+            'end_time'   => substr($this->end_time, 0, 5),
+            'price'      => (float) $this->price,
+            'status'     => $this->status,
+        ];
     }
 }

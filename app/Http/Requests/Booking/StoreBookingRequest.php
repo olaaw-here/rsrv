@@ -45,7 +45,7 @@ class StoreBookingRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            $timeSlotIds = $this->input('resource_id');
+            $resourceId = $this->input('resource_id');
             $slotIds = $this->input('time_slot_ids', []);
             if (! $resourceId || empty($slotIds)) {
                 return;
