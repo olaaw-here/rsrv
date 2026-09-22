@@ -63,8 +63,6 @@ class TimeSlotController extends Controller
             while ($cursor->copy()->addMinutes($duration)->lte($close)) {
                 $slotEnd = $cursor->copy()->addMinutes($duration);
 
-                // firstOrCreate menghormati unique constraint di tabel time_slots,
-                // jadi generate ulang pada rentang yang sama bersifat aman (idempotent).
                 $slot = TimeSlot::firstOrCreate(
                     [
                         'resource_id' => $resource->id,

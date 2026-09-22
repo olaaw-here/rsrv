@@ -14,6 +14,17 @@ class BookingService
     {
     }
 
+    /**
+     * Alur lengkap membuat booking baru:
+     *   1. Hold slot secara atomik (row-lock + DB transaction) via Booking::bookSlots().
+     *   2. Inisiasi transaksi pembayaran ke payment gateway (Midtrans Snap).
+     *
+     * @param  array{resource_id:int, time_slot_ids:int[], customer_notes?:string} $data
+     * @return array{booking: Booking, payment: Payment}
+     *
+     * @throws RuntimeException jika slot sudah tidak tersedia (ditangkap controller -> 409 Conflict)
+     */
+    
     public function create(User $user, array $data): array
     {
         $booking = Booking::create([

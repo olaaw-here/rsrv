@@ -33,6 +33,7 @@ class UpdateResourceRequest extends FormRequest
             'capacity' => ['nullable', 'integer', 'min:1'],
             'slot_duration_minutes' => ['sometimes', 'required', 'integer', 'min:15'],
             'base_price' => ['sometimes', 'required', 'numeric', 'min:0'],
+            'status'    => ['sometimes', 'required', 'in:active,inactive,draft'],
         ];
     }
 }

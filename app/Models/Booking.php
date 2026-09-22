@@ -23,7 +23,6 @@ class Booking extends Model
         'confirmed_at' => 'datetime',
     ];
 
-    // Relationships
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -44,10 +43,10 @@ class Booking extends Model
         return $this->hasManyThrough(
             TimeSlot::class,
             BookingSlot::class,
-            'booking_id',   // FK di booking_slots -> booking
-            'id',           // FK di time_slots -> id
-            'id',           // local key di bookings
-            'time_slot_id'  // local key di booking_slots
+            'booking_id',   
+            'id',           
+            'id',           
+            'time_slot_id'  
         );
     }
 
@@ -82,8 +81,6 @@ class Booking extends Model
         int $holdMinutes = 15
     ): self {
         return DB::transaction(function () use ($userId, $resourceId, $timeSlotIds, $holdMinutes) {
-            // 1. Kunci baris slot yang dipilih agar tidak bisa diambil
-            //    transaksi lain sampai transaksi ini commit/rollback.
             $slots = TimeSlot::whereIn('id', $timeSlotIds)
                 ->where('resource_id', $resourceId)
                 ->lockForUpdate()
@@ -93,7 +90,6 @@ class Booking extends Model
                 throw new RuntimeException('Beberapa slot tidak ditemukan.');
             }
 
-            // 2. Validasi ulang: semua slot harus masih 'available'.
             $notAvailable = $slots->firstWhere('status', '!=', 'available');
             if ($notAvailable) {
                 throw new RuntimeException('Slot sudah dipesan oleh orang lain.');
@@ -102,7 +98,6 @@ class Booking extends Model
             $totalPrice = $slots->sum('price');
             $expiresAt = now()->addMinutes($holdMinutes);
 
-            // 3. Buat booking baru.
             $booking = self::create([
                 'booking_code' => 'BK-' . strtoupper(Str::random(10)),
                 'user_id' => $userId,
@@ -112,14 +107,12 @@ class Booking extends Model
                 'expires_at' => $expiresAt,
             ]);
 
-            // 4. Tandai slot menjadi 'held' dan kaitkan ke booking ini.
             TimeSlot::whereIn('id', $timeSlotIds)->update([
                 'status' => 'held',
                 'held_by_booking_id' => $booking->id,
                 'held_until' => $expiresAt,
             ]);
 
-            // 5. Catat slot ke pivot booking_slots (snapshot harga saat itu).
             foreach ($slots as $slot) {
                 BookingSlot::create([
                     'booking_id' => $booking->id,
