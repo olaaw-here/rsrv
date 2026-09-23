@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'role'  => $this->role,
+            'provider_status' => $this->when($this->role === 'provider', $this->providerProfile?->status),
         ];
     }
 }

@@ -92,9 +92,9 @@ class TimeSlotController extends Controller
         $this->authorizeOwnership($request, $resource);
         $this->ensureSlotBelongsToResource($resource, $slot);
 
-        if ($slot->status === 'booked') {
+        if ($slot->status !== 'available') {
             throw ValidationException::withMessages([
-                'slot' => 'Slot yang sudah dipesan tidak dapat diblokir.',
+                'slot' => 'Hanya slot yang tersedia yang dapat diblokir.',
             ]);
         }
 

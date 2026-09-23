@@ -44,7 +44,7 @@
                     </button>
                 </template>
 
-                <template x-if="['pending_payment','confirmed'].includes(booking.status)">
+                <template x-if="booking.status === 'pending_payment'">
                     <button @click="cancel()" :disabled="cancelling"
                             class="border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 disabled:opacity-50">
                         <span x-text="cancelling ? 'Membatalkan...' : 'Batalkan Booking'"></span>

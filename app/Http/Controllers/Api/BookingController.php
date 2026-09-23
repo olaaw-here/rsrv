@@ -22,7 +22,7 @@ class BookingController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $booking = $request->user()->bookings()
+        $bookings = $request->user()->bookings()
             ->with(['resource', 'bookingSlots.timeSlot'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest()
@@ -48,8 +48,8 @@ class BookingController extends Controller
 
         return response()->json([
             'booking' => new BookingResource($result['booking']),
-            'snap_token' => $result['snap_token']->snap_token,
-            'payment_url' => $result['payment_url']->payment_url,
+            'snap_token' => $result['payment']->snap_token,
+            'payment_url' => $result['payment']->payment_url,
         ], 201);
     }
 

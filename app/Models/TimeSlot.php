@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TimeSlot extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'resource_id', 'slot_date', 'start_time', 'end_time', 'price',
         'status', 'held_by_booking_id', 'held_until',

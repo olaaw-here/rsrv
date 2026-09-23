@@ -34,6 +34,8 @@ class ResourceController extends Controller
 
     public function show(Resource $resource): JsonResponse
     {
+        abort_unless($resource->status === 'active', 404);
+
         $resource->load(['category', 'provider', 'images', 'operationalHours']);
         return response()->json(new ResourceResource($resource));
     }

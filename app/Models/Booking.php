@@ -90,6 +90,15 @@ class Booking extends Model
                 throw new RuntimeException('Beberapa slot tidak ditemukan.');
             }
 
+            $resource = Resource::find($resourceId);
+            if (! $resource || $resource->status !== 'active') {
+                throw new RuntimeException('Resource tidak tersedia.');
+            }
+
+            if ($slots->contains(fn ($slot) => $slot->slot_date->lt(today()))) {
+                throw new RuntimeException('Slot pada tanggal yang sudah lewat tidak dapat dipesan.');
+            }
+
             $notAvailable = $slots->firstWhere('status', '!=', 'available');
             if ($notAvailable) {
                 throw new RuntimeException('Slot sudah dipesan oleh orang lain.');

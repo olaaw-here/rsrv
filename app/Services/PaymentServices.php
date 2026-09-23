@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Midtrans\Config as MidtransConfig;
 use Midtrans\Snap;
 use RuntimeException;
+use Illuminate\Support\Str;
 
 class PaymentService
 {
@@ -26,6 +27,20 @@ class PaymentService
      */
     public function initiateForBooking(Booking $booking): Payment
     {
+        $booking->loadMissing(['user', 'resource', 'bookingSlots.timeSlot']);
+
+        $existing = $booking->payments()
+            ->where('status', 'pending')
+            ->where(function ($query) {
+                $query->whereNull('expired_at')->orWhere('expired_at', '>', now());
+            })
+            ->latest()
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
         $params = [
             'transaction_details' => [
                 'order_id'     => $this->generateOrderId($booking),
@@ -71,7 +86,7 @@ class PaymentService
      */
     protected function generateOrderId(Booking $booking): string
     {
-        return $booking->booking_code . '-' . now()->timestamp;
+        return $booking->booking_code . '-' . now()->timestamp . '-' . Str::upper(Str::random(6));
     }
 
     /**
@@ -100,7 +115,7 @@ class PaymentService
     public function handleNotification(array $payload): void
     {
         $orderId = $payload['order_id'] ?? null;
-        $notificationId = $payload['transaction_id'] ?? null; // ID unik transaksi dari Midtrans
+        $notificationId = $this->notificationKey($payload);
         $transactionStatus = $payload['transaction_status'] ?? null;
         $fraudStatus = $payload['fraud_status'] ?? null;
 
@@ -144,6 +159,12 @@ class PaymentService
                 'transaction_status' => $transactionStatus,
             ]),
         };
+    }
+
+    protected function notificationKey(array $payload): string
+    {
+        ksort($payload);
+        return hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
     protected function markAsPaid(Payment $payment, Booking $booking): void

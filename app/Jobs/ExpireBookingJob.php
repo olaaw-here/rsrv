@@ -20,8 +20,9 @@ class ExpireBookingJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(BookingService $bookingService): void
     {
-        //
+        $bookingService->expireOverdueBookings();
+        $bookingService->completeDueBookings();
     }
 }

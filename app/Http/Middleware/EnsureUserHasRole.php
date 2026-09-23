@@ -21,6 +21,10 @@ class EnsureUserHasRole
             abort(403, 'Unauthorized');
         }
 
+        if (in_array('provider', $roles, true) && (! $user->providerProfile || $user->providerProfile->status !== 'active')) {
+            abort(403, 'Akun provider belum aktif atau belum disetujui admin.');
+        }
+
         return $next($request);
     }
 }

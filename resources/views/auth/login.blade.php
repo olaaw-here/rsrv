@@ -53,7 +53,7 @@
                     // Simpan token via Alpine store yang ada di layout (root $data)
                     this.$root.setAuth(data.token, data.user);
 
-                    window.location.href = data.user.role === 'provider'
+                    window.location.href = data.user.role === 'provider' && data.user.provider_status === 'active'
                         ? '{{ url('/provider/dashboard') }}'
                         : '{{ url('/resources') }}';
                 } catch (e) {
