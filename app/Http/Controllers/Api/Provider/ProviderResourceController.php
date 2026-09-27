@@ -10,7 +10,7 @@ use App\Models\Resource;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
-class ProviderResourceController
+class ProviderResourceController extends Controller
 {
     /**
      * Display a listing of the resource.

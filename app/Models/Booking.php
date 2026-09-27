@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Services\NotificationService;
 use RuntimeException;
 
 class Booking extends Model
@@ -138,15 +139,41 @@ class Booking extends Model
      * Konfirmasi booking setelah pembayaran berhasil (dipanggil dari
      * webhook handler, idealnya sudah lolos pengecekan idempotency).
      */
-    public function confirm(): void
+    public function confirm(): bool
     {
-        DB::transaction(function () {
-            $this->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+        return DB::transaction(function () {
+            $booking = self::whereKey($this->id)->lockForUpdate()->firstOrFail();
 
-            TimeSlot::where('held_by_booking_id', $this->id)->update([
+            if ($booking->status === 'confirmed' || $booking->status === 'completed') {
+                return false;
+            }
+
+            if ($booking->status !== 'pending_payment') {
+                return false;
+            }
+
+            $slots = TimeSlot::where('held_by_booking_id', $booking->id)
+                ->lockForUpdate()
+                ->get();
+
+            if ($slots->isEmpty() || $slots->contains(fn ($slot) => $slot->held_until && $slot->held_until->lt(now()))) {
+                return false;
+            }
+
+            $booking->update(['status' => 'confirmed', 'confirmed_at' => now(), 'expires_at' => null]);
+            $slots->each(fn ($slot) => $slot->update([
                 'status' => 'booked',
                 'held_until' => null,
-            ]);
+            ]));
+
+            app(NotificationService::class)->send(
+                $booking->user,
+                'booking_confirmed',
+                'Pembayaran berhasil',
+                "Booking {$booking->booking_code} telah dikonfirmasi."
+            );
+
+            return true;
         });
     }
 
@@ -156,7 +183,7 @@ class Booking extends Model
     public function releaseSlots(string $newStatus = 'cancelled'): void
     {
         DB::transaction(function () use ($newStatus) {
-            $this->update(['status' => $newStatus]);
+            $this->update(['status' => $newStatus, 'expires_at' => null]);
 
             TimeSlot::where('held_by_booking_id', $this->id)->update([
                 'status' => 'available',

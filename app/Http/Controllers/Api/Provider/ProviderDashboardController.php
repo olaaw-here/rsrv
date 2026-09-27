@@ -18,11 +18,9 @@ class ProviderDashboardController extends Controller
 
         $totals = DB::table('bookings')
             ->whereIn('resource_id', $resourceIds)
-            ->selectRaw("
-                COUNT(*) FILTER (WHERE status IN ('confirmed','completed')) as total_booking,
-                COALESCE(SUM(total_price) FILTER (WHERE status IN ('confirmed','completed')), 0) as total_pendapatan,
-                COUNT(*) FILTER (WHERE status = 'pending_payment') as pending_payment
-            ")
+            ->selectRaw("SUM(CASE WHEN status IN ('confirmed','completed') THEN 1 ELSE 0 END) as total_booking")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status IN ('confirmed','completed') THEN total_price ELSE 0 END), 0) as total_pendapatan")
+            ->selectRaw("SUM(CASE WHEN status = 'pending_payment' THEN 1 ELSE 0 END) as pending_payment")
             ->first();
     
         return response()->json([
@@ -57,9 +55,30 @@ class ProviderDashboardController extends Controller
         ]);
     }
 
-    public function exportBookings(Request $request): JsonResponse
+    public function exportBookings(Request $request)
     {
-        return response()->json(['message' => 'Export belum diimplementasikan — lihat TODO di controller.'], 501);
+        $providerProfile = $request->user()->providerProfile;
+        $resourceIds = $providerProfile->resources()->pluck('id');
+
+        $bookings = \App\Models\Booking::whereIn('resource_id', $resourceIds)
+            ->with(['resource', 'user'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from))
+            ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->to))
+            ->latest()
+            ->get();
+
+        return response()->streamDownload(function () use ($bookings) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Booking Code', 'Resource', 'Customer', 'Status', 'Total', 'Created At']);
+            foreach ($bookings as $booking) {
+                fputcsv($out, [
+                    $booking->booking_code, $booking->resource->name, $booking->user->name,
+                    $booking->status, $booking->total_price, $booking->created_at?->toDateTimeString(),
+                ]);
+            }
+            fclose($out);
+        }, 'bookings.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function occupancy(Request $request, Resource $resource): JsonResponse

@@ -14,6 +14,7 @@ class ResourceController extends Controller
     {
         $query = Resource::query()
             ->active()
+            ->whereHas('provider', fn ($q) => $q->where('status', 'active'))
             ->with(['category', 'provider'])
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->category_id))
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->type))
@@ -34,7 +35,8 @@ class ResourceController extends Controller
 
     public function show(Resource $resource): JsonResponse
     {
-        abort_unless($resource->status === 'active', 404);
+        $resource->load('provider');
+        abort_unless($resource->status === 'active' && $resource->provider?->status === 'active', 404);
 
         $resource->load(['category', 'provider', 'images', 'operationalHours']);
         return response()->json(new ResourceResource($resource));

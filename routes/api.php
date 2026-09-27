@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Provider\ProviderResourceController;
 use App\Http\Controllers\Api\Provider\OperationalHourController;
 use App\Http\Controllers\Api\Provider\ProviderDashboardController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\Admin\ProviderApprovalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,6 +51,14 @@ Route::get('/resources/{resource}/slots', [TimeSlotController::class, 'index']);
 Route::post('/webhooks/midtrans', [PaymentWebhookController::class, 'handleMidtrans'])
     ->withoutMiddleware(['auth:sanctum']) // tegaskan: endpoint ini publik dari sisi HTTP
     ->name('webhooks.midtrans');
+
+// =====================================================================
+// ADMIN
+// =====================================================================
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/providers', [ProviderApprovalController::class, 'index']);
+    Route::patch('/providers/{providerProfile}/status', [ProviderApprovalController::class, 'update']);
+});
 
 
 // =========================================================================

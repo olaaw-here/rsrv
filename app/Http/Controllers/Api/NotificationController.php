@@ -26,9 +26,8 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function markAsRead(Request $request, int $notificationId): JsonResponse
+    public function markAsRead(Request $request, Notification $notification): JsonResponse
     {
-        $notification = Notification::whereKey($notificationId)->firstOrFail();
 
         if ($notification->user_id !== $request->user()->id) {
             abort(403);

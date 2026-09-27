@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Booking;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
@@ -46,7 +47,9 @@ class BookingService
             throw new RuntimeException('Booking hanya dapat dibatalkan sebelum pembayaran berhasil.');
         }
 
+        $booking->payments()->where('status', 'pending')->update(['status' => 'cancel']);
         $booking->releaseSlots('cancelled');
+        app(NotificationService::class)->send($booking->user, 'booking_cancelled', 'Booking dibatalkan', "Booking {$booking->booking_code} telah dibatalkan.");
         return $booking->fresh();
     }
 
@@ -85,6 +88,7 @@ class BookingService
                         $locked = Booking::whereKey($booking->id)->lockForUpdate()->first();
                         if ($locked && $locked->status === 'pending_payment' && $locked->expires_at?->lte(now())) {
                             $locked->releaseSlots('expired');
+                            app(NotificationService::class)->send($locked->user, 'booking_expired', 'Booking kedaluwarsa', "Booking {$locked->booking_code} kedaluwarsa karena pembayaran belum diterima.");
                         }
                     });
                     $count++;
