@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\Provider\OperationalHourController;
 use App\Http\Controllers\Api\Provider\ProviderDashboardController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Admin\ProviderApprovalController;
+use App\Http\Controllers\Api\Admin\AdminDashboardController;
+use App\Http\Controllers\Api\Admin\RefundController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,8 +58,14 @@ Route::post('/webhooks/midtrans', [PaymentWebhookController::class, 'handleMidtr
 // ADMIN
 // =====================================================================
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard/summary', [AdminDashboardController::class, 'summary']);
+    Route::get('/dashboard/bookings', [AdminDashboardController::class, 'recentBookings']);
     Route::get('/providers', [ProviderApprovalController::class, 'index']);
     Route::patch('/providers/{providerProfile}/status', [ProviderApprovalController::class, 'update']);
+    Route::get('/refunds', [RefundController::class, 'index']);
+    Route::post('/payments/{payment}/refund', [RefundController::class, 'requestRefund']);
+    Route::post('/refunds/{refund}/process', [RefundController::class, 'process']);
+    Route::post('/refunds/{refund}/reject', [RefundController::class, 'reject']);
 });
 
 
@@ -101,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dashboard rekap
         Route::get('/dashboard/summary', [ProviderDashboardController::class, 'summary']);
         Route::get('/dashboard/bookings', [ProviderDashboardController::class, 'bookings']);
+        Route::get('/dashboard/bookings/{booking}', [ProviderDashboardController::class, 'showBooking']);
         Route::get('/dashboard/bookings/export', [ProviderDashboardController::class, 'exportBookings']);
         Route::get('/resources/{resource}/occupancy', [ProviderDashboardController::class, 'occupancy']);
     });

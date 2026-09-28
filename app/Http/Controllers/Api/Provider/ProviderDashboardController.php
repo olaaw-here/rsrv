@@ -55,6 +55,18 @@ class ProviderDashboardController extends Controller
         ]);
     }
 
+    public function showBooking(Request $request, int $booking): JsonResponse
+    {
+        $providerProfile = $request->user()->providerProfile;
+        $resourceIds = $providerProfile->resources()->pluck('id');
+
+        $bookingModel = \App\Models\Booking::whereIn('resource_id', $resourceIds)
+            ->with(['resource', 'user', 'bookingSlots.timeSlot', 'payments', 'review'])
+            ->findOrFail($booking);
+
+        return response()->json(new BookingResource($bookingModel));
+    }
+
     public function exportBookings(Request $request)
     {
         $providerProfile = $request->user()->providerProfile;

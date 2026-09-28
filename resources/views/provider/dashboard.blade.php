@@ -5,11 +5,14 @@
 @section('content')
 <div x-data="providerDashboard()" x-init="load()">
 
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-wrap justify-between items-center gap-2 mb-6">
         <h1 class="text-2xl font-bold">Dashboard Provider</h1>
-        <a href="{{ url('/provider/resources') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
-            Kelola Resource Saya
-        </a>
+        <div class="flex gap-2">
+            <a href="{{ url('/provider/bookings') }}" class="border border-blue-200 text-blue-700 px-4 py-2 rounded-lg text-sm">Lihat Semua Booking</a>
+            <a href="{{ url('/provider/resources') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+                Kelola Resource Saya
+            </a>
+        </div>
     </div>
 
     <template x-if="summary">

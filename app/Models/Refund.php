@@ -10,7 +10,7 @@ class Refund extends Model
     const UPDATED_AT = null;
 
     protected $fillable = [
-        'payment_id', 'amount', 'reason', 'status', 'processed_by', 'processed_at',
+        'payment_id', 'refund_key', 'amount', 'reason', 'status', 'processed_by', 'processed_at',
     ];
 
     protected $casts = [

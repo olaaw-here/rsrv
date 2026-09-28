@@ -50,8 +50,8 @@
                 try {
                     const data = await apiFetch('/login', { method: 'POST', body: this.form });
 
-                    // Simpan token via Alpine store yang ada di layout (root $data)
-                    this.$root.setAuth(data.token, data.user);
+                    // Simpan token ke Alpine.store('auth') global (lihat layouts/app.blade.php)
+                    Alpine.store('auth').setAuth(data.token, data.user);
 
                     window.location.href = data.user.role === 'provider' && data.user.provider_status === 'active'
                         ? '{{ url('/provider/dashboard') }}'

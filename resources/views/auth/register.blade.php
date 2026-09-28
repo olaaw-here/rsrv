@@ -60,7 +60,7 @@ function registerForm() {
             this.errorMessage = null;
             try {
                 const data = await apiFetch('/register', { method: 'POST', body: this.form });
-                this.$root.setAuth(data.token, data.user);
+                Alpine.store('auth').setAuth(data.token, data.user);
                 window.location.href = data.user.role === 'provider' && data.user.provider_status === 'active'
                     ? '{{ url('/provider/dashboard') }}'
                     : '{{ url('/resources') }}';

@@ -29,8 +29,13 @@ Route::get('/bookings/{booking}', function (int $booking) {
     return view('bookings.show', ['bookingId' => $booking]);
 })->name('bookings.show');
 
+// Admin
+Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+Route::view('/admin/refunds', 'admin.refunds')->name('admin.refunds');
+
 // Provider
 Route::view('/provider/dashboard', 'provider.dashboard')->name('provider.dashboard');
+Route::view('/provider/bookings', 'provider.bookings')->name('provider.bookings');
 Route::view('/provider/resources', 'provider.resources.index')->name('provider.resources.index');
 Route::get('/provider/resources/create', function () {
     return view('provider.resources.form', ['resourceId' => null]);
