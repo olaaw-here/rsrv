@@ -3,42 +3,82 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Booking;
 use App\Models\Payment;
-use App\Models\ProviderProfile;
 use App\Models\Refund;
+use App\Services\RefundService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use RuntimeException;
+use Throwable;
 
-class AdminDashboardController extends Controller
+class RefundController extends Controller
 {
-    public function summary(): JsonResponse
+    public function __construct(protected RefundService $refundService)
     {
-        $booking = Booking::selectRaw("COUNT(*) as total")
-            ->selectRaw("SUM(CASE WHEN status = 'pending_payment' THEN 1 ELSE 0 END) as pending_payment")
-            ->selectRaw("SUM(CASE WHEN status IN ('confirmed','completed') THEN 1 ELSE 0 END) as active_or_completed")
-            ->selectRaw("COALESCE(SUM(CASE WHEN status IN ('confirmed','completed') THEN total_price ELSE 0 END), 0) as gross_booking_value")
-            ->first();
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        $refunds = Refund::with(['payment.booking.user', 'payment.booking.resource', 'processedBy'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->latest()
+            ->paginate($request->integer('per_page', 15));
 
         return response()->json([
-            'providers_pending' => ProviderProfile::where('status', 'pending')->count(),
-            'providers_active' => ProviderProfile::where('status', 'active')->count(),
-            'total_bookings' => (int) ($booking->total ?? 0),
-            'pending_payment' => (int) ($booking->pending_payment ?? 0),
-            'active_or_completed' => (int) ($booking->active_or_completed ?? 0),
-            'gross_booking_value' => (float) ($booking->gross_booking_value ?? 0),
-            'refunds_requested' => Refund::where('status', 'requested')->count(),
-            'payments_settled' => Payment::where('status', 'settlement')->count(),
+            'data' => $refunds->items(),
+            'meta' => [
+                'current_page' => $refunds->currentPage(),
+                'last_page' => $refunds->lastPage(),
+                'total' => $refunds->total(),
+            ],
         ]);
     }
 
-    public function recentBookings(): JsonResponse
+    public function requestRefund(Request $request, Payment $payment): JsonResponse
     {
-        $bookings = Booking::with(['resource', 'user', 'payments'])
-            ->latest()
-            ->limit(15)
-            ->get();
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:1'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
 
-        return response()->json(['data' => $bookings]);
+        try {
+            $refund = $this->refundService->request(
+                $payment,
+                (float) $data['amount'],
+                $data['reason'] ?? null,
+                $request->user()
+            );
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (Throwable $e) {
+            report($e);
+            return response()->json(['message' => 'Midtrans menolak atau gagal memproses request refund.'], 502);
+        }
+
+        return response()->json(['message' => 'Refund berhasil diajukan ke payment gateway.', 'data' => $refund->load('payment')], 201);
+    }
+
+    public function process(Request $request, Refund $refund): JsonResponse
+    {
+        try {
+            $refund = $this->refundService->markProcessed($refund, $request->user());
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['message' => 'Refund ditandai selesai.', 'data' => $refund]);
+    }
+
+    public function reject(Request $request, Refund $refund): JsonResponse
+    {
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
+
+        try {
+            $refund = $this->refundService->reject($refund, $request->user(), $data['reason'] ?? null);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['message' => 'Refund ditolak.', 'data' => $refund]);
     }
 }

@@ -7,13 +7,17 @@ use App\Models\User;
 
 class NotificationService
 {
-    public function send(User $user, string $type, string $title, ?string $message = null): Notification
-    {
-        return Notification::create([
-            'user_id' => $user->id,
+    public function send(
+        User $user,
+        string $type,
+        string $title,
+        string $message
+    ): Notification {
+        return $user->appNotifications()->create([
             'type' => $type,
             'title' => $title,
             'message' => $message,
+            'is_read' => false,
         ]);
     }
 }

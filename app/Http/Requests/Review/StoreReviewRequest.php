@@ -14,7 +14,10 @@ class StoreReviewRequest extends FormRequest
     {
         $booking = $this->route('booking');
 
-        return $booking !== null && $booking->user_id === $this->user()?->id && $booking->status === 'completed' && !$booking->review === null;
+        return $booking !== null
+            && $booking->user_id === $this->user()?->id
+            && $booking->status === 'completed'
+            && $booking->review()->doesntExist();
     }
 
     /**
