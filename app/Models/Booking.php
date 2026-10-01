@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use App\Services\NotificationService;
 use RuntimeException;
 
 class Booking extends Model
@@ -91,9 +90,13 @@ class Booking extends Model
                 throw new RuntimeException('Beberapa slot tidak ditemukan.');
             }
 
-            $resource = Resource::find($resourceId);
+            $resource = Resource::with('provider')->find($resourceId);
             if (! $resource || $resource->status !== 'active') {
                 throw new RuntimeException('Resource tidak tersedia.');
+            }
+
+            if (! $resource->provider || $resource->provider->status !== 'active') {
+                throw new RuntimeException('Provider resource belum aktif atau sedang ditangguhkan.');
             }
 
             if ($slots->contains(fn ($slot) => $slot->slot_date->lt(today()))) {
@@ -139,41 +142,15 @@ class Booking extends Model
      * Konfirmasi booking setelah pembayaran berhasil (dipanggil dari
      * webhook handler, idealnya sudah lolos pengecekan idempotency).
      */
-    public function confirm(): bool
+    public function confirm(): void
     {
-        return DB::transaction(function () {
-            $booking = self::whereKey($this->id)->lockForUpdate()->firstOrFail();
+        DB::transaction(function () {
+            $this->update(['status' => 'confirmed', 'confirmed_at' => now()]);
 
-            if ($booking->status === 'confirmed' || $booking->status === 'completed') {
-                return false;
-            }
-
-            if ($booking->status !== 'pending_payment') {
-                return false;
-            }
-
-            $slots = TimeSlot::where('held_by_booking_id', $booking->id)
-                ->lockForUpdate()
-                ->get();
-
-            if ($slots->isEmpty() || $slots->contains(fn ($slot) => $slot->held_until && $slot->held_until->lt(now()))) {
-                return false;
-            }
-
-            $booking->update(['status' => 'confirmed', 'confirmed_at' => now(), 'expires_at' => null]);
-            $slots->each(fn ($slot) => $slot->update([
+            TimeSlot::where('held_by_booking_id', $this->id)->update([
                 'status' => 'booked',
                 'held_until' => null,
-            ]));
-
-            app(NotificationService::class)->send(
-                $booking->user,
-                'booking_confirmed',
-                'Pembayaran berhasil',
-                "Booking {$booking->booking_code} telah dikonfirmasi."
-            );
-
-            return true;
+            ]);
         });
     }
 
@@ -183,7 +160,7 @@ class Booking extends Model
     public function releaseSlots(string $newStatus = 'cancelled'): void
     {
         DB::transaction(function () use ($newStatus) {
-            $this->update(['status' => $newStatus, 'expires_at' => null]);
+            $this->update(['status' => $newStatus]);
 
             TimeSlot::where('held_by_booking_id', $this->id)->update([
                 'status' => 'available',

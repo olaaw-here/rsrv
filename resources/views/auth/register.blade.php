@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.customer')
 
 @section('title', 'Daftar')
 
@@ -60,7 +60,8 @@ function registerForm() {
             this.errorMessage = null;
             try {
                 const data = await apiFetch('/register', { method: 'POST', body: this.form });
-                Alpine.store('auth').setAuth(data.token, data.user);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
                 window.location.href = data.user.role === 'provider' && data.user.provider_status === 'active'
                     ? '{{ url('/provider/dashboard') }}'
                     : '{{ url('/resources') }}';

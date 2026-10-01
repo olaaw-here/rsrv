@@ -15,7 +15,9 @@ class UpdateResourceRequest extends FormRequest
         $resource = $this->route('resource');
         $providerProfile = $this->user()?->providerProfile;
 
-        return $providerProfile && $providerProfile->id === $resource->provider_profile_id;
+        return $providerProfile
+            && $providerProfile->status === 'active'
+            && $providerProfile->id === $resource->provider_id;
     }
 
     /**
@@ -28,7 +30,7 @@ class UpdateResourceRequest extends FormRequest
         return [
             'category_id' => ['sometimes', 'required', 'integer', 'exists:categories,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'type' => ['sometimes', 'required', 'in:place,field,room,service,product'],
+            'type' => ['sometimes', 'required', 'in:tempat,lapangan,konsultasi'],
             'description' => ['nullable', 'string', 'max:1000'],
             'capacity' => ['nullable', 'integer', 'min:1'],
             'slot_duration_minutes' => ['sometimes', 'required', 'integer', 'min:15'],

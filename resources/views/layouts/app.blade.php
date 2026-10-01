@@ -14,7 +14,7 @@
 
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col" x-data="{}">
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col" x-data="authStore()" x-init="init()">
 
     <nav class="bg-white border-b sticky top-0 z-10">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -23,23 +23,24 @@
             <div class="flex items-center gap-4 text-sm">
                 <a href="{{ url('/resources') }}" class="hover:text-blue-600">Cari Tempat/Jasa</a>
 
-                <template x-if="$store.auth.token">
+                <template x-if="token">
                     <div class="flex items-center gap-4">
                         <a href="{{ url('/bookings') }}" class="hover:text-blue-600">Booking Saya</a>
-                        <template x-if="$store.auth.user && $store.auth.user.role === 'provider'">
+                        <template x-if="user && user.role === 'provider'">
                             <a href="{{ url('/provider/dashboard') }}" class="hover:text-blue-600">Dashboard Provider</a>
                             <a href="{{ url('/provider/bookings') }}" class="hover:text-blue-600">Booking Masuk</a>
                         </template>
-                        <template x-if="$store.auth.user && $store.auth.user.role === 'admin'">
+                        <template x-if="user && user.role === 'admin'">
                             <a href="{{ url('/admin/dashboard') }}" class="hover:text-blue-600">Dashboard Admin</a>
+                            <a href="{{ url('/admin/providers') }}" class="hover:text-blue-600">Verifikasi Provider</a>
                             <a href="{{ url('/admin/refunds') }}" class="hover:text-blue-600">Refund</a>
                         </template>
-                        <span class="text-gray-400" x-text="$store.auth.user ? $store.auth.user.name : ''"></span>
-                        <button @click="$store.auth.logout()" class="text-red-600 hover:underline">Logout</button>
+                        <span class="text-gray-400" x-text="user ? user.name : ''"></span>
+                        <button @click="logout()" class="text-red-600 hover:underline">Logout</button>
                     </div>
                 </template>
 
-                <template x-if="!$store.auth.token">
+                <template x-if="!token">
                     <div class="flex items-center gap-3">
                         <a href="{{ url('/login') }}" class="hover:text-blue-600">Login</a>
                         <a href="{{ url('/register') }}" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">Daftar</a>
@@ -59,38 +60,30 @@
 
     <script>
         // ---------------------------------------------------------------
-        // Alpine.store GLOBAL untuk status login (token disimpan di localStorage).
-        // Didaftarkan lewat event 'alpine:init' -> wajib berjalan SEBELUM
-        // Alpine mulai scan elemen x-data (makanya script ini TIDAK boleh
-        // diberi atribut `defer`, supaya sempat register lebih dulu).
-        //
-        // Diakses dari mana saja, tanpa peduli posisi di DOM, lewat:
-        //   $store.auth.token         (di dalam template Blade/Alpine)
-        //   Alpine.store('auth')      (di dalam <script> biasa/method JS)
+        // Alpine store global untuk status login (token disimpan di localStorage)
         // ---------------------------------------------------------------
-        document.addEventListener('alpine:init', () => {
-            Alpine.store('auth', {
+        function authStore() {
+            return {
                 token: localStorage.getItem('token'),
                 user: JSON.parse(localStorage.getItem('user') || 'null'),
-
+                init() {
+                    // no-op, token & user sudah di-load dari localStorage di atas
+                },
                 setAuth(token, user) {
                     this.token = token;
                     this.user = user;
                     localStorage.setItem('token', token);
                     localStorage.setItem('user', JSON.stringify(user));
                 },
-
                 logout() {
                     apiFetch('/logout', { method: 'POST' }).finally(() => {
-                        this.token = null;
-                        this.user = null;
                         localStorage.removeItem('token');
                         localStorage.removeItem('user');
                         window.location.href = '{{ url('/login') }}';
                     });
                 },
-            });
-        });
+            };
+        }
 
         // ---------------------------------------------------------------
         // Helper fetch ke API — otomatis kirim Bearer token & handle JSON.

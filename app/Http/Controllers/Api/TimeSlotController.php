@@ -21,6 +21,12 @@ class TimeSlotController extends Controller
     {
         $request->validate(['date' => ['required', 'date']]);
 
+        abort_unless(
+            $resource->status === 'active'
+                && $resource->provider?->status === 'active',
+            404
+        );
+
         $slots = $resource->timeSlots()
             ->forDate($request->date)
             ->whereIn('status', ['available', 'booked', 'blocked']) // 'held' sengaja disembunyikan dari publik

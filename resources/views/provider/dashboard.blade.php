@@ -3,92 +3,62 @@
 @section('title', 'Dashboard Provider')
 
 @section('content')
-<div x-data="providerDashboard()" x-init="load()">
-
-    <div class="flex flex-wrap justify-between items-center gap-2 mb-6">
-        <h1 class="text-2xl font-bold">Dashboard Provider</h1>
-        <div class="flex gap-2">
-            <a href="{{ url('/provider/bookings') }}" class="border border-blue-200 text-blue-700 px-4 py-2 rounded-lg text-sm">Lihat Semua Booking</a>
-            <a href="{{ url('/provider/resources') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
-                Kelola Resource Saya
-            </a>
+<div x-data="providerDashboard()" x-init="load()" class="space-y-6">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+            <p class="text-sm font-semibold text-blue-600">AREA PROVIDER</p>
+            <h1 class="mt-1 text-3xl font-black tracking-tight">Kelola bisnis kamu di RSRV.</h1>
+            <p class="mt-2 max-w-2xl text-sm text-slate-500">Buat resource, atur jam operasional, generate slot, dan pantau booking pelanggan.</p>
         </div>
+        <a href="{{ url('/provider/resources/create') }}" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">+ Tambah Resource</a>
     </div>
 
-    <template x-if="summary">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white border rounded-xl p-4">
-                <p class="text-xs text-gray-500">Total Booking</p>
-                <p class="text-2xl font-bold" x-text="summary.total_booking"></p>
-            </div>
-            <div class="bg-white border rounded-xl p-4">
-                <p class="text-xs text-gray-500">Total Pendapatan</p>
-                <p class="text-2xl font-bold" x-text="'Rp ' + Number(summary.total_pendapatan).toLocaleString('id-ID')"></p>
-            </div>
-            <div class="bg-white border rounded-xl p-4">
-                <p class="text-xs text-gray-500">Menunggu Bayar</p>
-                <p class="text-2xl font-bold" x-text="summary.pending_payment"></p>
-            </div>
-            <div class="bg-white border rounded-xl p-4">
-                <p class="text-xs text-gray-500">Rating</p>
-                <p class="text-2xl font-bold" x-text="'⭐ ' + summary.rating_avg"></p>
-            </div>
+    <template x-if="providerStatus && providerStatus !== 'active'">
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <p class="font-bold">Profil provider belum aktif.</p>
+            <p class="mt-1">Status: <span class="font-semibold" x-text="providerStatus"></span>. CRUD resource akan tersedia setelah admin menyetujui provider.</p>
         </div>
     </template>
 
-    <h2 class="font-semibold text-lg mb-3">Booking Terbaru</h2>
+    <template x-if="summary">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-2xl border bg-white p-5"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Total Booking</p><p class="mt-2 text-3xl font-black" x-text="summary.total_booking"></p></div>
+            <div class="rounded-2xl border bg-white p-5"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Pendapatan</p><p class="mt-2 text-xl font-black" x-text="formatRupiah(summary.total_pendapatan)"></p></div>
+            <div class="rounded-2xl border bg-white p-5"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Menunggu Bayar</p><p class="mt-2 text-3xl font-black" x-text="summary.pending_payment"></p></div>
+            <div class="rounded-2xl border bg-white p-5"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Rating</p><p class="mt-2 text-3xl font-black" x-text="'⭐ ' + summary.rating_avg"></p></div>
+        </div>
+    </template>
 
-    <template x-if="loading" x-cloak><p class="text-gray-400 text-sm">Memuat...</p></template>
-
-    <div class="bg-white border rounded-xl divide-y">
-        <template x-for="b in bookings" :key="b.id">
-            <div class="p-4 flex justify-between items-center">
-                <div>
-                    <p class="font-medium" x-text="b.resource.name + ' · ' + b.booking_code"></p>
-                    <p class="text-xs text-gray-500" x-text="new Date(b.created_at).toLocaleString('id-ID')"></p>
-                </div>
-                <div class="text-right">
-                    <p class="text-sm font-semibold" x-text="'Rp ' + Number(b.total_price).toLocaleString('id-ID')"></p>
-                    <span class="text-xs px-2 py-0.5 rounded-full" :class="statusColor(b.status)" x-text="b.status"></span>
-                </div>
-            </div>
-        </template>
+    <div class="grid gap-4 md:grid-cols-3">
+        <a href="{{ url('/provider/resources') }}" class="rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-2xl">🏢</p><h2 class="mt-3 font-bold">Resource Saya</h2><p class="mt-1 text-sm text-slate-500">Tambah, edit, nonaktifkan, dan atur resource.</p>
+        </a>
+        <a href="{{ url('/provider/resources/create') }}" class="rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-2xl">➕</p><h2 class="mt-3 font-bold">Tambah Resource</h2><p class="mt-1 text-sm text-slate-500">Buat tempat, lapangan, atau layanan baru.</p>
+        </a>
+        <a href="{{ url('/provider/bookings') }}" class="rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <p class="text-2xl">📋</p><h2 class="mt-3 font-bold">Booking Masuk</h2><p class="mt-1 text-sm text-slate-500">Pantau booking pelanggan untuk resource kamu.</p>
+        </a>
     </div>
+
+    <section>
+        <div class="mb-3 flex items-center justify-between"><h2 class="font-bold text-lg">Booking Terbaru</h2><a href="{{ url('/provider/bookings') }}" class="text-sm font-semibold text-blue-600">Lihat semua →</a></div>
+        <template x-if="loading" x-cloak><div class="rounded-2xl border bg-white p-6 text-sm text-slate-400">Memuat...</div></template>
+        <template x-if="!loading && bookings.length === 0" x-cloak><div class="rounded-2xl border bg-white p-8 text-center text-sm text-slate-400">Belum ada booking.</div></template>
+        <div class="overflow-hidden rounded-2xl border bg-white divide-y">
+            <template x-for="b in bookings" :key="b.id">
+                <div class="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p class="font-semibold" x-text="b.resource.name + ' · ' + b.booking_code"></p><p class="text-xs text-slate-500" x-text="new Date(b.created_at).toLocaleString('id-ID')"></p></div>
+                    <div class="text-left sm:text-right"><p class="font-semibold" x-text="formatRupiah(b.total_price)"></p><span class="text-xs text-slate-500" x-text="b.status"></span></div>
+                </div>
+            </template>
+        </div>
+    </section>
 </div>
 
 @push('scripts')
 <script>
-    function providerDashboard() {
-        return {
-            summary: null,
-            bookings: [],
-            loading: false,
-
-            async load() {
-                this.loading = true;
-                try {
-                    this.summary = await apiFetch('/provider/dashboard/summary');
-                    const data = await apiFetch('/provider/dashboard/bookings?per_page=10');
-                    this.bookings = data.data;
-                } catch (e) {
-                    if (e.status === 401) window.location.href = '{{ url('/login') }}';
-                    if (e.status === 403) alert('Halaman ini khusus provider.');
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            statusColor(status) {
-                return {
-                    pending_payment: 'bg-yellow-100 text-yellow-700',
-                    confirmed: 'bg-green-100 text-green-700',
-                    completed: 'bg-blue-100 text-blue-700',
-                    cancelled: 'bg-red-100 text-red-700',
-                    expired: 'bg-gray-100 text-gray-500',
-                }[status] || 'bg-gray-100 text-gray-500';
-            },
-        };
-    }
+function providerDashboard(){return{summary:null,bookings:[],loading:false,providerStatus:null,async load(){this.loading=true;try{this.summary=await apiFetch('/provider/dashboard/summary');const data=await apiFetch('/provider/dashboard/bookings?per_page=10');this.bookings=data.data;this.providerStatus=data.provider_status||this.summary.provider_status||'active';}catch(e){if(e.status===401)window.location.href='{{ url('/login') }}';else if(e.status===403)alert(e.message);}finally{this.loading=false;}}}}
 </script>
 @endpush
 @endsection

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.customer')
 
 @section('title', 'Login')
 
@@ -51,7 +51,8 @@
                     const data = await apiFetch('/login', { method: 'POST', body: this.form });
 
                     // Simpan token ke Alpine.store('auth') global (lihat layouts/app.blade.php)
-                    Alpine.store('auth').setAuth(data.token, data.user);
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
 
                     window.location.href = data.user.role === 'provider' && data.user.provider_status === 'active'
                         ? '{{ url('/provider/dashboard') }}'

@@ -1,8 +1,8 @@
-&commat;extends('layouts.app')
+@extends('layouts.app')
 
-&commat;section('title', 'Dashboard Admin')
+@section('title', 'Dashboard Admin')
 
-&commat;section('content')
+@section('content')
 <div x-data="adminDashboard()" x-init="load()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header Section -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -116,7 +116,7 @@
     </div>
 </div>
 
-&commat;push('scripts')
+@push('scripts')
 <script>
 function adminDashboard() {
     return {
@@ -170,5 +170,5 @@ function adminDashboard() {
     }
 }
 </script>
-&commat;endpush
-&commat;endsection
+@endpush
+@endsection

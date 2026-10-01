@@ -3,37 +3,28 @@
 use Illuminate\Support\Facades\Route;
 
 /*
-|--------------------------------------------------------------------------
-| Web Routes — hanya menyajikan shell Blade + Alpine.js.
-| Semua data diambil client-side lewat fetch() ke routes/api.php,
-| jadi controller di sini sengaja tidak dibutuhkan (cukup closure/view).
-|--------------------------------------------------------------------------
+| Web routes serve the Blade shell. Data is fetched from routes/api.php.
 */
 
 Route::redirect('/', '/resources');
 
-// Auth
 Route::view('/login', 'auth.login')->name('login');
 Route::view('/register', 'auth.register')->name('register');
 
-// Publik — katalog & kalender
 Route::view('/resources', 'resources.index')->name('resources.index');
 Route::get('/resources/{resource}', function (int $resource) {
     return view('resources.show', ['resourceId' => $resource]);
 })->name('resources.show');
 
-// Customer — booking (halaman butuh login, tapi pengecekan sesungguhnya
-// tetap di sisi API; kalau token tidak ada, JS akan redirect ke /login)
 Route::view('/bookings', 'bookings.index')->name('bookings.index');
 Route::get('/bookings/{booking}', function (int $booking) {
     return view('bookings.show', ['bookingId' => $booking]);
 })->name('bookings.show');
 
-// Admin
 Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+Route::view('/admin/providers', 'admin.providers')->name('admin.providers');
 Route::view('/admin/refunds', 'admin.refunds')->name('admin.refunds');
 
-// Provider
 Route::view('/provider/dashboard', 'provider.dashboard')->name('provider.dashboard');
 Route::view('/provider/bookings', 'provider.bookings')->name('provider.bookings');
 Route::view('/provider/resources', 'provider.resources.index')->name('provider.resources.index');

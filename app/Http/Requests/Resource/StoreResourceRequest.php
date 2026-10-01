@@ -11,7 +11,7 @@ class StoreResourceRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->providerProfile !== null;
+        return $this->user()?->providerProfile?->status === 'active';
     }
 
     /**
@@ -24,7 +24,7 @@ class StoreResourceRequest extends FormRequest
         return [
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'in:place,field,room,service,product'],
+            'type' => ['required', 'in:tempat,lapangan,konsultasi'],
             'description' => ['nullable', 'string', 'max:1000'],
             'capacity' => ['nullable', 'integer', 'min:1'],
             'slot_duration_minutes' => ['required', 'integer', 'min:15'],
@@ -37,7 +37,7 @@ class StoreResourceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'type.in' => 'The selected type is invalid. Allowed values are: place, field, room, service, product.',
+            'type.in' => 'The selected type is invalid. Allowed values are: tempat, lapangan, konsultasi.',
             'slot_duration_minutes.min' => 'The slot duration must be at least 15 minutes.',
         ];
     }
