@@ -1,129 +1,206 @@
-@extends('layouts.app')
+@extends('layouts.provider')
 
 @section('title', 'Jam Operasional')
 
 @section('content')
-<div class="max-w-2xl mx-auto" x-data="hoursForm({{ $resourceId }})" x-init="load()">
+<div class="mx-auto max-w-3xl" x-data="hoursForm({{ $resourceId }})" x-init="load()">
 
-    <h1 class="text-xl font-bold mb-4">Jam Operasional & Generate Slot</h1>
+    <div class="mb-6">
+        <a href="{{ url('/provider/resources') }}" class="text-sm font-semibold text-pvdr-700 hover:underline">← Kembali ke Resource</a>
+        <p class="mt-4 text-xs font-bold uppercase tracking-wider text-pvdr-600">Operasional</p>
+        <h1 class="mt-1 text-3xl font-black tracking-tight">Jam Operasional & Slot</h1>
+        <p class="mt-2 text-sm text-slate-500">Atur jam buka resource, lalu generate slot yang dapat dipesan pelanggan.</p>
+    </div>
 
-    <div class="bg-white border rounded-xl p-6 mb-6">
-        <h2 class="font-semibold mb-3">Jam Operasional per Hari</h2>
+    <template x-if="errorMessage" x-cloak>
+        <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" x-text="errorMessage"></div>
+    </template>
 
-        <div class="space-y-2">
-            <template x-for="(h, i) in hours" :key="h.day_of_week">
-                <div class="flex items-center gap-3">
-                    <span class="w-24 text-sm" x-text="dayName(h.day_of_week)"></span>
-                    <label class="flex items-center gap-1 text-xs">
-                        <input type="checkbox" x-model="h.is_closed"> Tutup
-                    </label>
-                    <input type="time" x-model="h.open_time" :disabled="h.is_closed" class="border rounded-lg px-2 py-1 text-sm">
-                    <span class="text-xs">s/d</span>
-                    <input type="time" x-model="h.close_time" :disabled="h.is_closed" class="border rounded-lg px-2 py-1 text-sm">
+    <div class="card p-6">
+        <div class="mb-5 flex items-center justify-between gap-3">
+            <div>
+                <h2 class="font-bold">Jam Operasional Mingguan</h2>
+                <p class="mt-1 text-xs text-slate-500">Centang Tutup untuk hari ketika resource tidak beroperasi.</p>
+            </div>
+            <span class="rounded-full bg-pvdr-50 px-3 py-1 text-xs font-semibold text-pvdr-700">7 hari</span>
+        </div>
+
+        <div class="space-y-3">
+            <template x-for="h in hours" :key="h.day_of_week">
+                <div class="rounded-xl border border-slate-100 p-3">
+                    <div class="grid gap-3 sm:grid-cols-[100px_90px_1fr_1fr] sm:items-center">
+                        <span class="text-sm font-semibold" x-text="dayName(h.day_of_week)"></span>
+
+                        <label class="flex items-center gap-2 text-xs text-slate-500">
+                            <input type="checkbox" x-model="h.is_closed" class="rounded border-slate-300">
+                            Tutup
+                        </label>
+
+                        <label class="text-xs text-slate-500">
+                            Buka
+                            <input type="time" x-model="h.open_time" :disabled="h.is_closed"
+                                   class="mt-1 block w-full rounded-lg border border-slate-200 px-2 py-2 text-sm disabled:bg-slate-100">
+                        </label>
+
+                        <label class="text-xs text-slate-500">
+                            Tutup
+                            <input type="time" x-model="h.close_time" :disabled="h.is_closed"
+                                   class="mt-1 block w-full rounded-lg border border-slate-200 px-2 py-2 text-sm disabled:bg-slate-100">
+                        </label>
+                    </div>
                 </div>
             </template>
         </div>
 
-        <button @click="saveHours()" :disabled="savingHours"
-                class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-            <span x-text="savingHours ? 'Menyimpan...' : 'Simpan Jam Operasional'"></span>
-        </button>
+        <div class="mt-5 flex justify-end">
+            <button @click="saveHours()" :disabled="savingHours"
+                    class="rounded-xl bg-pvdr-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-pvdr-700 disabled:opacity-50">
+                <span x-text="savingHours ? 'Menyimpan...' : 'Simpan Jam Operasional'"></span>
+            </button>
+        </div>
     </div>
 
-    <div class="bg-white border rounded-xl p-6">
-        <h2 class="font-semibold mb-3">Generate Slot Waktu</h2>
-        <p class="text-xs text-gray-500 mb-3">
-            Buat baris timeslot secara otomatis dari jam operasional di atas, untuk rentang tanggal tertentu.
-            Aman dijalankan berulang kali (tidak akan membuat slot duplikat).
-        </p>
+    <div class="card mt-5 p-6">
+        <div class="mb-5">
+            <h2 class="font-bold">Generate Slot</h2>
+            <p class="mt-1 text-xs leading-5 text-slate-500">
+                Sistem akan membuat slot berdasarkan jam operasional dan durasi resource.
+                Aman dijalankan ulang karena slot yang sudah ada tidak dibuat dua kali.
+            </p>
+        </div>
 
-        <div class="flex gap-3 items-end">
-            <div>
-                <label class="text-xs">Dari Tanggal</label>
-                <input type="date" x-model="generateFrom" class="border rounded-lg px-2 py-1.5 text-sm block">
-            </div>
-            <div>
-                <label class="text-xs">Sampai Tanggal</label>
-                <input type="date" x-model="generateTo" class="border rounded-lg px-2 py-1.5 text-sm block">
-            </div>
+        <div class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <label class="text-xs font-semibold text-slate-600">
+                Dari tanggal
+                <input type="date" x-model="generateFrom"
+                       class="mt-1.5 block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+            </label>
+
+            <label class="text-xs font-semibold text-slate-600">
+                Sampai tanggal
+                <input type="date" x-model="generateTo"
+                       class="mt-1.5 block w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+            </label>
+
             <button @click="generateSlots()" :disabled="generating"
-                    class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50">
+                    class="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50">
                 <span x-text="generating ? 'Memproses...' : 'Generate Slot'"></span>
             </button>
         </div>
 
         <template x-if="generateMessage" x-cloak>
-            <p class="text-sm text-green-700 mt-3" x-text="generateMessage"></p>
+            <div class="mt-4 rounded-xl bg-pvdr-50 p-3 text-sm font-medium text-pvdr-700" x-text="generateMessage"></div>
         </template>
     </div>
 </div>
 
 @push('scripts')
 <script>
-    function hoursForm(resourceId) {
-        return {
-            resourceId,
-            hours: [],
-            savingHours: false,
-            generating: false,
-            generateFrom: null,
-            generateTo: null,
-            generateMessage: null,
+function hoursForm(resourceId) {
+    return {
+        resourceId,
+        hours: [],
+        savingHours: false,
+        generating: false,
+        generateFrom: null,
+        generateTo: null,
+        generateMessage: null,
+        errorMessage: null,
 
-            dayNames: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
-            dayName(i) { return this.dayNames[i]; },
+        dayNames: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
 
-            async load() {
-                try {
-                    const existing = await apiFetch('/provider/resources/' + this.resourceId + '/hours');
-                    const byDay = Object.fromEntries(existing.map(h => [h.day_of_week, h]));
+        dayName(i) {
+            return this.dayNames[i] || '-';
+        },
 
-                    this.hours = [0, 1, 2, 3, 4, 5, 6].map(day => byDay[day] || {
-                        day_of_week: day, open_time: '08:00', close_time: '20:00', is_closed: false,
-                    });
-                } catch (e) {
-                    alert(e.message);
+        defaultDates() {
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+
+            const localDate = date => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            this.generateFrom = localDate(today);
+            this.generateTo = localDate(nextWeek);
+        },
+
+        async load() {
+            this.defaultDates();
+
+            try {
+                const existing = await apiFetch('/provider/resources/' + this.resourceId + '/hours');
+                const byDay = Object.fromEntries(existing.map(h => [h.day_of_week, h]));
+
+                this.hours = [0, 1, 2, 3, 4, 5, 6].map(day => byDay[day] || {
+                    day_of_week: day,
+                    open_time: '08:00',
+                    close_time: '20:00',
+                    is_closed: false,
+                });
+            } catch (e) {
+                if (e.status === 401) {
+                    window.location.href = '{{ url('/login') }}';
+                    return;
                 }
+                this.errorMessage = e.message;
+            }
+        },
 
-                const today = new Date();
-                const nextWeek = new Date();
-                nextWeek.setDate(today.getDate() + 7);
-                this.generateFrom = today.toISOString().slice(0, 10);
-                this.generateTo = nextWeek.toISOString().slice(0, 10);
-            },
+        async saveHours() {
+            this.savingHours = true;
+            this.errorMessage = null;
 
-            async saveHours() {
-                this.savingHours = true;
-                try {
-                    await apiFetch('/provider/resources/' + this.resourceId + '/hours', {
-                        method: 'PUT',
-                        body: { hours: this.hours },
-                    });
-                    alert('Jam operasional tersimpan.');
-                } catch (e) {
-                    alert(e.message);
-                } finally {
-                    this.savingHours = false;
-                }
-            },
+            try {
+                await apiFetch('/provider/resources/' + this.resourceId + '/hours', {
+                    method: 'PUT',
+                    body: { hours: this.hours },
+                });
+                alert('Jam operasional tersimpan.');
+            } catch (e) {
+                this.errorMessage = e.message;
+            } finally {
+                this.savingHours = false;
+            }
+        },
 
-            async generateSlots() {
-                this.generating = true;
-                this.generateMessage = null;
-                try {
-                    const res = await apiFetch('/provider/resources/' + this.resourceId + '/slots/generate', {
-                        method: 'POST',
-                        body: { from: this.generateFrom, to: this.generateTo },
-                    });
-                    this.generateMessage = res.message;
-                } catch (e) {
-                    alert(e.message);
-                } finally {
-                    this.generating = false;
-                }
-            },
-        };
-    }
+        async generateSlots() {
+            if (!this.generateFrom || !this.generateTo) {
+                this.errorMessage = 'Tanggal generate wajib diisi.';
+                return;
+            }
+
+            if (this.generateFrom > this.generateTo) {
+                this.errorMessage = 'Tanggal mulai tidak boleh setelah tanggal selesai.';
+                return;
+            }
+
+            this.generating = true;
+            this.generateMessage = null;
+            this.errorMessage = null;
+
+            try {
+                const res = await apiFetch('/provider/resources/' + this.resourceId + '/slots/generate', {
+                    method: 'POST',
+                    body: {
+                        from: this.generateFrom,
+                        to: this.generateTo,
+                    },
+                });
+
+                this.generateMessage = res.message || 'Slot berhasil dibuat.';
+            } catch (e) {
+                this.errorMessage = e.message;
+            } finally {
+                this.generating = false;
+            }
+        },
+    };
+}
 </script>
 @endpush
 @endsection

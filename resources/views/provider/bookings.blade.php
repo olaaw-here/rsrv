@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.provider')
 @section('title', 'Booking Provider')
 @section('content')
 <div x-data="providerBookings()" x-init="load()">

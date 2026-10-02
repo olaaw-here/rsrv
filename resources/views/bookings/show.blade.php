@@ -1,130 +1,92 @@
 @extends('layouts.customer')
 
-@push('scripts')
-<script src="https://app.sandbox.midtrans.com/snap/snap.js"
-        data-client-key="{{ config('services.midtrans.client_key') }}"></script>
-@endpush
-
 @section('title', 'Detail Booking')
 
 @section('content')
-<div x-data="bookingDetail({{ $bookingId }})" x-init="load()">
+<div x-data="bookingDetail({{ $bookingId }})" x-init="load()" class="mx-auto max-w-3xl space-y-6">
+    <a href="{{ url('/bookings') }}" class="inline-flex text-sm font-semibold text-blue-700 hover:underline">← Kembali ke Booking Saya</a>
 
-    <template x-if="booking">
-        <div class="bg-white border rounded-xl p-6">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-xl font-bold" x-text="booking.resource.name"></h1>
-                    <p class="text-sm text-gray-500" x-text="booking.booking_code"></p>
+    <template x-if="loading"><div class="card p-10 text-center text-sm text-slate-400">Memuat detail booking...</div></template>
+    <template x-if="errorMessage" x-cloak><div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" x-text="errorMessage"></div></template>
+
+    <template x-if="booking" x-cloak>
+        <div class="space-y-5">
+            <div class="card p-6">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="font-mono text-xs text-slate-400" x-text="'Booking #' + booking.id"></p>
+                        <h1 class="mt-1 text-2xl font-black" x-text="booking.resource?.name || 'Resource'"></h1>
+                        <p class="mt-1 text-sm text-slate-500" x-text="booking.resource?.provider?.business_name || 'Provider'"></p>
+                    </div>
+                    <span class="rounded-full px-3 py-1.5 text-xs font-bold" :class="statusClass(booking.status)" x-text="statusLabel(booking.status)"></span>
                 </div>
-                <span class="text-xs px-2 py-1 rounded-full" :class="statusColor(booking.status)" x-text="statusLabel(booking.status)"></span>
             </div>
 
-            <template x-if="booking.status === 'pending_payment'" x-cloak>
-                <div class="bg-yellow-50 text-yellow-700 text-sm p-3 rounded-lg mt-4">
-                    Menunggu konfirmasi pembayaran... halaman ini akan otomatis update begitu pembayaran terkonfirmasi.
-                    <span x-show="polling"> (mengecek ulang...)</span>
+            <div class="card p-6">
+                <h2 class="font-bold">Jadwal</h2>
+                <div class="mt-4 space-y-2">
+                    <template x-for="slot in booking.booking_slots || []" :key="slot.id">
+                        <div class="flex items-center justify-between rounded-xl bg-slate-50 p-3">
+                            <span class="text-sm font-semibold" x-text="slot.time_slot?.date || '-'"></span>
+                            <span class="text-sm text-slate-600" x-text="(slot.time_slot?.start_time || '') + ' - ' + (slot.time_slot?.end_time || '')"></span>
+                        </div>
+                    </template>
                 </div>
-            </template>
+            </div>
 
-            <h2 class="font-semibold mt-6 mb-2">Slot yang dipesan</h2>
-            <div class="space-y-1 text-sm">
-                <template x-for="s in booking.slots" :key="s.time_slot_id">
-                    <div class="flex justify-between border-b py-1.5">
-                        <span x-text="s.slot_date + ' · ' + s.start_time + '-' + s.end_time"></span>
-                        <span x-text="'Rp ' + Number(s.price_snapshot).toLocaleString('id-ID')"></span>
+            <div class="card p-6">
+                <h2 class="font-bold">Pembayaran</h2>
+                <div class="mt-4 flex justify-between border-t border-slate-100 pt-3 text-base font-black">
+                    <span>Total</span><span x-text="formatRupiah(booking.total_price)"></span>
+                </div>
+                <template x-if="booking.status === 'pending_payment'">
+                    <div>
+                        <button @click="pay()" :disabled="processing" class="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
+                            <span x-text="processing ? 'Memproses...' : 'Bayar Sekarang'"></span>
+                        </button>
+                        <button @click="cancel()" :disabled="processing" class="mt-2 w-full rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600">Batalkan Booking</button>
                     </div>
                 </template>
             </div>
 
-            <div class="flex justify-between font-bold mt-3">
-                <span>Total</span>
-                <span x-text="'Rp ' + Number(booking.total_price).toLocaleString('id-ID')"></span>
-            </div>
+            <template x-if="booking.status === 'completed' && !booking.review" x-cloak>
+                <div class="card p-6">
+                    <h2 class="font-bold">Bagaimana pengalamanmu?</h2>
+                    <p class="mt-1 text-sm text-slate-500">Berikan rating untuk membantu customer lain.</p>
+                    <div class="mt-5 flex gap-2">
+                        <template x-for="n in 5" :key="n">
+                            <button @click="rating=n" class="text-3xl" :class="rating>=n?'text-amber-400':'text-slate-200'">★</button>
+                        </template>
+                    </div>
+                    <textarea x-model="comment" rows="3" placeholder="Tulis pengalamanmu (opsional)..." class="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"></textarea>
+                    <button @click="submitReview()" :disabled="!rating||processing" class="mt-3 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Kirim Review</button>
+                </div>
+            </template>
 
-            <div class="flex gap-3 mt-6">
-                <template x-if="booking.status === 'pending_payment' && booking.payment && booking.payment.snap_token">
-                    <button @click="pay()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                        Bayar Sekarang
-                    </button>
-                </template>
-
-                <template x-if="booking.status === 'pending_payment'">
-                    <button @click="cancel()" :disabled="cancelling"
-                            class="border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 disabled:opacity-50">
-                        <span x-text="cancelling ? 'Membatalkan...' : 'Batalkan Booking'"></span>
-                    </button>
-                </template>
-            </div>
+            <template x-if="booking.review" x-cloak>
+                <div class="card p-6">
+                    <h2 class="font-bold">Review Kamu</h2>
+                    <div class="mt-2 text-xl text-amber-400" x-text="'★'.repeat(booking.review.rating)"></div>
+                    <p class="mt-2 text-sm text-slate-600" x-text="booking.review.comment || 'Tidak ada komentar.'"></p>
+                </div>
+            </template>
         </div>
     </template>
 </div>
 
 @push('scripts')
 <script>
-    function bookingDetail(bookingId) {
-        return {
-            bookingId,
-            booking: null,
-            polling: false,
-            cancelling: false,
-            pollTimer: null,
-
-            async load() {
-                try {
-                    this.booking = await apiFetch('/bookings/' + this.bookingId);
-
-                    // Selama masih pending_payment, polling tiap 5 detik —
-                    // karena konfirmasi sesungguhnya datang async lewat webhook Midtrans.
-                    if (this.booking.status === 'pending_payment') {
-                        this.polling = true;
-                        this.pollTimer = setTimeout(() => this.load(), 5000);
-                    } else {
-                        this.polling = false;
-                    }
-                } catch (e) {
-                    if (e.status === 401) window.location.href = '{{ url('/login') }}';
-                }
-            },
-
-            pay() {
-                window.snap.pay(this.booking.payment.snap_token, {
-                    onSuccess: () => this.load(),
-                    onPending: () => this.load(),
-                    onError: () => alert('Pembayaran gagal.'),
-                    onClose: () => this.load(),
-                });
-            },
-
-            async cancel() {
-                if (!confirm('Yakin batalkan booking ini?')) return;
-
-                this.cancelling = true;
-                try {
-                    this.booking = await apiFetch('/bookings/' + this.bookingId + '/cancel', { method: 'POST' });
-                } catch (e) {
-                    alert(e.message);
-                } finally {
-                    this.cancelling = false;
-                }
-            },
-
-            statusLabel(status) {
-                return { pending_payment: 'Menunggu Bayar', confirmed: 'Terkonfirmasi', completed: 'Selesai',
-                    cancelled: 'Dibatalkan', expired: 'Kedaluwarsa', refunded: 'Direfund' }[status] || status;
-            },
-            statusColor(status) {
-                return {
-                    pending_payment: 'bg-yellow-100 text-yellow-700',
-                    confirmed: 'bg-green-100 text-green-700',
-                    completed: 'bg-blue-100 text-blue-700',
-                    cancelled: 'bg-red-100 text-red-700',
-                    expired: 'bg-gray-100 text-gray-500',
-                    refunded: 'bg-purple-100 text-purple-700',
-                }[status] || 'bg-gray-100 text-gray-500';
-            },
-        };
-    }
+function bookingDetail(id){
+return{
+bookingId:id,booking:null,loading:true,processing:false,errorMessage:null,rating:0,comment:'',
+formatRupiah(v){return'Rp '+Number(v||0).toLocaleString('id-ID')},
+statusLabel(s){return{pending_payment:'Menunggu Pembayaran',confirmed:'Dikonfirmasi',completed:'Selesai',cancelled:'Dibatalkan',expired:'Expired',refunded:'Refund'}[s]||s},
+statusClass(s){return{pending_payment:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',completed:'bg-emerald-100 text-emerald-700',cancelled:'bg-red-100 text-red-700',expired:'bg-slate-100 text-slate-600',refunded:'bg-purple-100 text-purple-700'}[s]||'bg-slate-100 text-slate-600'},
+async load(){try{this.booking=await apiFetch('/bookings/'+this.bookingId)}catch(e){if(e.status===401){window.location.href='{{ url('/login') }}';return}this.errorMessage=e.message}finally{this.loading=false}},
+async pay(){this.processing=true;try{const r=await apiFetch('/bookings/'+this.bookingId+'/pay',{method:'POST'});if(r.snap_token&&window.snap)window.snap.pay(r.snap_token,{onSuccess:()=>this.load(),onPending:()=>this.load(),onError:()=>this.load()});else if(r.payment_url)window.location.href=r.payment_url}catch(e){alert(e.message)}finally{this.processing=false}},
+async cancel(){if(!confirm('Batalkan booking ini?'))return;this.processing=true;try{await apiFetch('/bookings/'+this.bookingId+'/cancel',{method:'POST'});await this.load()}catch(e){alert(e.message)}finally{this.processing=false}},
+async submitReview(){if(!this.rating)return;this.processing=true;try{await apiFetch('/bookings/'+this.bookingId+'/review',{method:'POST',body:{rating:this.rating,comment:this.comment}});await this.load()}catch(e){alert(e.message)}finally{this.processing=false}}
+}}
 </script>
 @endpush
 @endsection
