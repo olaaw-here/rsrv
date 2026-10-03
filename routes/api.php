@@ -46,7 +46,7 @@ Route::get('/resources/{resource}', [ResourceController::class, 'show']);   // d
 Route::get('/resources/{resource}/slots', [TimeSlotController::class, 'index']);
 // contoh query: GET /api/resources/12/slots?date=2026-09-15
 
-
+// tes ombak
 // =========================================================================
 // PAYMENT GATEWAY WEBHOOK (public, tapi wajib verifikasi signature)
 // =========================================================================
