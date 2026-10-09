@@ -26,6 +26,7 @@ Route::view('/admin/providers', 'admin.providers')->name('admin.providers');
 Route::view('/admin/refunds', 'admin.refunds')->name('admin.refunds');
 
 Route::view('/provider/dashboard', 'provider.dashboard')->name('provider.dashboard');
+Route::view('/provider/profile', 'provider.profile')->name('provider.profile');
 Route::view('/provider/bookings', 'provider.bookings')->name('provider.bookings');
 Route::view('/provider/resources', 'provider.resources.index')->name('provider.resources.index');
 Route::get('/provider/resources/create', function () {

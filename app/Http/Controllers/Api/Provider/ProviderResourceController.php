@@ -40,7 +40,7 @@ class ProviderResourceController extends Controller
     {
         $resource = $request->user()->providerProfile->resources()->create([
             ...$request->safe()->except('images'),
-            'status' => 'draft', // resource baru default draft, provider aktifkan manual
+            'status' => $request->user()->providerProfile->status === 'active' ? 'active' : 'draft',
         ]);
 
         foreach ($request->safe()->input('images', []) as $index => $url) {

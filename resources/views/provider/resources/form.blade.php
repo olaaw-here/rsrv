@@ -92,7 +92,7 @@
                     <option value="active">Aktif — tampil untuk customer</option>
                     <option value="inactive">Nonaktif — tidak ditampilkan</option>
                 </select>
-                <p class="mt-2 text-xs text-slate-500">Resource baru dibuat sebagai Draft. Aktifkan setelah informasi dan jam operasional siap.</p>
+                <p class="mt-2 text-xs text-slate-500">Resource baru untuk provider aktif langsung tersedia di katalog customer. Provider yang masih menunggu approval tetap membuat resource sebagai Draft.</p>
             </div>
         </template>
 

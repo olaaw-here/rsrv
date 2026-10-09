@@ -12,12 +12,10 @@ class StoreReviewRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $booking = $this->route('booking');
-
-        return $booking !== null
-            && $booking->user_id === $this->user()?->id
-            && $booking->status === 'completed'
-            && $booking->review()->doesntExist();
+        // Validasi kepemilikan/status dilakukan kembali di ReviewController.
+        // FormRequest tidak boleh menghasilkan 403 hanya karena route-model
+        // binding belum tersedia pada tahap authorization.
+        return true;
     }
 
     /**

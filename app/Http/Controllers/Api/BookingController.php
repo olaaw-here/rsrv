@@ -23,7 +23,7 @@ class BookingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $bookings = $request->user()->bookings()
-            ->with(['resource', 'bookingSlots.timeSlot'])
+            ->with(['resource.category', 'resource.provider', 'bookingSlots.timeSlot', 'review', 'payments'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest()
             ->paginate($request->integer('per_page', 10));
@@ -57,7 +57,7 @@ class BookingController extends Controller
     {
         $this->authorizeOwnership($request, $booking);
 
-        $booking->load(['resource', 'bookingSlots.timeSlot']);
+        $booking->load(['resource.category', 'resource.provider', 'bookingSlots.timeSlot', 'review', 'payments']);
 
         return response()->json(new BookingResource($booking));
     }
@@ -66,8 +66,12 @@ class BookingController extends Controller
     {
         $this->authorizeOwnership($request, $booking);
 
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
         try {
-            $this->bookingService->cancel($booking);
+            $this->bookingService->cancel($booking, $validated['reason']);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }

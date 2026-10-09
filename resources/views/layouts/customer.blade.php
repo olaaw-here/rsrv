@@ -65,6 +65,20 @@
 
             {{-- User area --}}
             <div class="flex items-center gap-3">
+                <template x-if="token && user && user.role === 'provider'">
+                    <a href="{{ url('/provider/dashboard') }}"
+                       class="hidden sm:inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">
+                        ← Dashboard Provider
+                    </a>
+                </template>
+
+                <template x-if="token && user && user.role === 'admin'">
+                    <a href="{{ url('/admin/dashboard') }}"
+                       class="hidden sm:inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800">
+                        ← Dashboard Admin
+                    </a>
+                </template>
+
                 <template x-if="token">
                     <div class="flex items-center gap-3" x-cloak>
                         <div class="relative" x-data="{ open: false }">
@@ -110,6 +124,12 @@
                 <template x-if="token">
                     <a href="{{ url('/bookings') }}" class="nav-link">📋 Booking Saya</a>
                 </template>
+                <template x-if="token && user && user.role === 'provider'">
+                    <a href="{{ url('/provider/dashboard') }}" class="nav-link text-emerald-700">← Dashboard Provider</a>
+                </template>
+                <template x-if="token && user && user.role === 'admin'">
+                    <a href="{{ url('/admin/dashboard') }}" class="nav-link">← Dashboard Admin</a>
+                </template>
                 <template x-if="token">
                     <button @click="logout()" class="nav-link w-full text-red-600">🚪 Logout</button>
                 </template>
@@ -126,7 +146,7 @@
     <footer class="bg-white border-t border-slate-100 mt-auto">
         <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
             <span>© {{ date('Y') }} RSRV — Platform Booking Layanan</span>
-            <span>Dibuat dengan ❤️ untuk kemudahan</span>
+            <span>Made by Olaaw</span>
         </div>
     </footer>
 

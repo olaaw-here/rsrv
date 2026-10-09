@@ -46,7 +46,7 @@ class ProviderBookingController extends Controller
         $resourceIds = $profile->resources()->pluck('id');
 
         $bookings = Booking::whereIn('resource_id', $resourceIds)
-            ->with(['resource', 'user:id,name,email,phone', 'bookingSlots.timeSlot', 'payments'])
+            ->with(['resource.category', 'resource.provider', 'user:id,name,email,phone', 'bookingSlots.timeSlot', 'payments'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->when($request->filled('resource_id'), fn ($q) => $q->where('resource_id', $request->resource_id))
             ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from))
@@ -76,7 +76,7 @@ class ProviderBookingController extends Controller
     {
         $this->authorizeOwnership($request, $booking);
 
-        $booking->load(['resource', 'user:id,name,email,phone', 'bookingSlots.timeSlot', 'payments', 'review']);
+        $booking->load(['resource.category', 'resource.provider', 'user:id,name,email,phone', 'bookingSlots.timeSlot', 'payments', 'review']);
 
         return response()->json(new BookingResource($booking));
     }
@@ -109,7 +109,7 @@ class ProviderBookingController extends Controller
             "Booking {$booking->booking_code} telah dikonfirmasi oleh provider."
         );
 
-        $booking->load(['resource', 'bookingSlots.timeSlot']);
+        $booking->load(['resource.category', 'resource.provider', 'bookingSlots.timeSlot']);
 
         return response()->json([
             'message' => 'Booking berhasil dikonfirmasi.',
@@ -141,7 +141,7 @@ class ProviderBookingController extends Controller
             "Booking {$booking->booking_code} telah selesai. Terima kasih!"
         );
 
-        $booking->load(['resource', 'bookingSlots.timeSlot']);
+        $booking->load(['resource.category', 'resource.provider', 'bookingSlots.timeSlot']);
 
         return response()->json([
             'message' => 'Booking ditandai sebagai selesai.',
@@ -166,7 +166,7 @@ class ProviderBookingController extends Controller
         }
 
         $validated = $request->validate([
-            'reason' => ['nullable', 'string', 'max:500'],
+            'reason' => ['required', 'string', 'max:500'],
         ]);
 
         // Lepas slot & set status cancelled
@@ -175,7 +175,8 @@ class ProviderBookingController extends Controller
         // Batalkan payment yang pending jika ada
         $booking->payments()->where('status', 'pending')->update(['status' => 'cancel']);
 
-        $reason = $validated['reason'] ?? 'Booking ditolak oleh provider.';
+        $reason = $validated['reason'];
+        $booking->update(['cancellation_reason' => $reason]);
 
         $this->notificationService->send(
             $booking->user,

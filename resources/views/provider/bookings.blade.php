@@ -72,6 +72,10 @@
                                 <p class="font-semibold text-slate-900" x-text="b.resource?.name || b.resource_name || 'Resource'"></p>
                                 <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="statusClass(b.status)" x-text="statusLabel(b.status)"></span>
                             </div>
+                            <p class="mt-1 text-sm text-slate-500">
+                                Kategori:
+                                <span class="font-medium text-slate-700" x-text="b.resource?.category?.name || 'Tanpa kategori'"></span>
+                            </p>
                             <p class="mt-1 text-sm text-slate-600">Customer: 
                                 <span class="font-medium" x-text="b.user?.name || b.customer?.name || b.customer_name || 'Customer'"></span>
                             </p>
@@ -129,7 +133,13 @@
                         <p x-show="!selectedBooking?.booking_slots?.length" class="mt-2 text-sm text-slate-500">Rincian slot tidak tersedia dari respons API.</p>
                         <div class="mt-4 border-t border-slate-100 pt-4">
                             <p class="text-xs text-slate-500">Catatan customer</p>
-                            <p class="mt-1 whitespace-pre-line text-sm" x-text="selectedBooking?.notes || selectedBooking?.customer_note || 'Tidak ada catatan.'"></p>
+                            <p class="mt-1 whitespace-pre-line text-sm" x-text="selectedBooking?.customer_notes || selectedBooking?.notes || selectedBooking?.customer_note || 'Tidak ada catatan.'"></p>
+                            <template x-if="selectedBooking?.cancellation_reason">
+                                <div class="mt-4 rounded-xl bg-rose-50 p-3">
+                                    <p class="text-xs font-semibold text-rose-700">Alasan pembatalan</p>
+                                    <p class="mt-1 whitespace-pre-line text-sm text-rose-800" x-text="selectedBooking.cancellation_reason"></p>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -146,7 +156,25 @@ function providerBookingsPage(){return {
  async loadBookings(){this.loading=true;this.error='';try{const p=new URLSearchParams();if(this.activeFilter!=='all')p.set('status',this.activeFilter);if(this.search.trim())p.set('search',this.search.trim());const r=await this.api('/api/provider/bookings'+(p.toString()?'?'+p:''));const d=Array.isArray(r)?r:(r.data||r.bookings||[]);this.bookings=Array.isArray(d)?d:(d.data||[]);this.stats=[{key:'all',label:'Semua booking',value:this.bookings.length},{key:'pending_payment',label:'Menunggu pembayaran',value:this.bookings.filter(x=>x.status==='pending_payment').length},{key:'confirmed',label:'Terkonfirmasi',value:this.bookings.filter(x=>x.status==='confirmed').length},{key:'completed',label:'Selesai',value:this.bookings.filter(x=>x.status==='completed').length}]}catch(e){this.error=e.message}finally{this.loading=false}},
  get filteredBookings(){const q=this.search.trim().toLowerCase();return this.bookings.filter(b=>(this.activeFilter==='all'||b.status===this.activeFilter)&&(!q||[b.booking_code,b.code,b.id,b.resource?.name,b.resource_name,b.user?.name,b.customer?.name,b.customer_name].join(' ').toLowerCase().includes(q)))},
  async showDetails(b){this.selectedBooking=b;try{const r=await this.api(`/api/provider/bookings/${b.id}`);this.selectedBooking=r.data||r.booking||r}catch(e){}},
- async performAction(b,a){const label={confirm:'mengonfirmasi',complete:'menandai selesai',reject:'menolak'}[a];if(!confirm(`Yakin ingin ${label} booking ini?`))return;this.workingId=b.id;this.error='';this.notice='';try{const r=await this.api(`/api/provider/bookings/${b.id}/${a}`,{method:'POST',body:JSON.stringify({})});this.notice=r.message||'Perubahan booking berhasil disimpan.';this.selectedBooking=null;await this.loadBookings()}catch(e){this.error=e.message}finally{this.workingId=null}},
+ async performAction(b,a){
+  const label={confirm:'mengonfirmasi',complete:'menandai selesai',reject:'menolak'}[a];
+  let reason='';
+  if(a==='reject'){
+    reason=prompt('Masukkan alasan penolakan booking (wajib):') || '';
+    if(!reason.trim()){ this.error='Alasan penolakan wajib diisi.'; return; }
+    if(!confirm('Tolak booking ini dengan alasan tersebut?')) return;
+  }else{
+    if(!confirm(`Yakin ingin ${label} booking ini?`)) return;
+  }
+  this.workingId=b.id;this.error='';this.notice='';
+  try{
+    const body=a==='reject'?{reason:reason.trim()}:{};
+    const r=await this.api(`/api/provider/bookings/${b.id}/${a}`,{method:'POST',body:JSON.stringify(body)});
+    this.notice=r.message||'Perubahan booking berhasil disimpan.';
+    this.selectedBooking=null;
+    await this.loadBookings();
+  }catch(e){this.error=e.message}finally{this.workingId=null}
+},
  statusLabel(s){return ({pending_payment:'Menunggu pembayaran',confirmed:'Terkonfirmasi',completed:'Selesai',cancelled:'Dibatalkan',expired:'Kedaluwarsa',refunded:'Refund'})[s]||s||'—'},
  statusClass(s){return ({pending_payment:'bg-amber-50 text-amber-700',confirmed:'bg-indigo-50 text-indigo-700',completed:'bg-emerald-50 text-emerald-700',cancelled:'bg-rose-50 text-rose-700',expired:'bg-slate-100 text-slate-600',refunded:'bg-violet-50 text-violet-700'})[s]||'bg-slate-100 text-slate-600'},
  formatMoney(v){return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v||0))},

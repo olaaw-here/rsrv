@@ -19,7 +19,6 @@
                         <span class="text-xs text-slate-400">RSRV</span>
                     </div>
 
-```
                 <h1 class="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                     Admin Dashboard
                 </h1>
@@ -468,7 +467,7 @@
 
     </div>
 </main>
-```
+
 
 </div>
 
@@ -497,7 +496,7 @@ function adminDashboard() {
                     throw new Error('Sesi login tidak ditemukan. Silakan login kembali.');
                 }
 
-                const response = await fetch('/api/admin/dashboard', {
+                const response = await fetch('/api/admin/dashboard/summary', {
                     method: 'GET',
                     headers: {
                         Accept: 'application/json',
@@ -517,33 +516,16 @@ function adminDashboard() {
                 const payload = data.data || data.stats || data;
 
                 this.stats.pending_providers =
-                    Number(
-                        payload.pending_providers ??
-                        payload.stats?.pending_providers ??
-                        0
-                    );
+                    Number(payload.providers_pending ?? payload.pending_providers ?? 0);
 
                 this.stats.active_providers =
-                    Number(
-                        payload.active_providers ??
-                        payload.stats?.active_providers ??
-                        0
-                    );
+                    Number(payload.providers_active ?? payload.active_providers ?? 0);
 
                 this.stats.bookings =
-                    Number(
-                        payload.bookings ??
-                        payload.total_bookings ??
-                        payload.stats?.bookings ??
-                        0
-                    );
+                    Number(payload.total_bookings ?? payload.bookings ?? 0);
 
                 this.stats.pending_refunds =
-                    Number(
-                        payload.pending_refunds ??
-                        payload.stats?.pending_refunds ??
-                        0
-                    );
+                    Number(payload.refunds_requested ?? payload.pending_refunds ?? 0);
 
             } catch (error) {
                 console.error('Admin dashboard error:', error);

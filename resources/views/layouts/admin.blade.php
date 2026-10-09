@@ -158,7 +158,35 @@
         return {
             token: localStorage.getItem('token'),
             user: JSON.parse(localStorage.getItem('user') || 'null'),
-            init() {},
+            async init() {
+                if (!this.token) {
+                    window.location.href = '{{ url('/login') }}';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/me', {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + this.token,
+                        },
+                    });
+
+                    const data = await response.json().catch(() => null);
+
+                    if (!response.ok || data?.role !== 'admin') {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = '{{ url('/resources') }}';
+                        return;
+                    }
+
+                    this.user = data;
+                    localStorage.setItem('user', JSON.stringify(data));
+                } catch (e) {
+                    window.location.href = '{{ url('/login') }}';
+                }
+            },
             logout() {
                 apiFetch('/logout', { method: 'POST' }).finally(() => {
                     localStorage.removeItem('token');

@@ -27,9 +27,24 @@ class TimeSlotController extends Controller
             404
         );
 
+        // Hold yang sudah lewat harus kembali terlihat sebagai available,
+        // walaupun scheduler belum sempat menjalankan expiry job.
+        TimeSlot::where('resource_id', $resource->id)
+            ->whereDate('slot_date', $request->date)
+            ->where('status', 'held')
+            ->where(function ($q) {
+                $q->whereNull('held_until')
+                  ->orWhere('held_until', '<=', now());
+            })
+            ->update([
+                'status' => 'available',
+                'held_by_booking_id' => null,
+                'held_until' => null,
+            ]);
+
         $slots = $resource->timeSlots()
             ->forDate($request->date)
-            ->whereIn('status', ['available', 'booked', 'blocked']) // 'held' sengaja disembunyikan dari publik
+            ->whereIn('status', ['available', 'booked', 'blocked'])
             ->orderBy('start_time')
             ->get();
 

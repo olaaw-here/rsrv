@@ -14,7 +14,7 @@ class Booking extends Model
 {
     protected $fillable = [
         'booking_code', 'user_id', 'resource_id', 'total_price', 'status',
-        'customer_notes', 'expires_at', 'confirmed_at',
+        'customer_notes', 'cancellation_reason', 'expires_at', 'confirmed_at',
     ];
 
     protected $casts = [
@@ -103,9 +103,31 @@ class Booking extends Model
                 throw new RuntimeException('Slot pada tanggal yang sudah lewat tidak dapat dipesan.');
             }
 
+            // Bersihkan hold yang sudah kedaluwarsa sebelum mengecek ketersediaan.
+            // Ini penting untuk demo/local karena scheduler tidak selalu berjalan.
+            $expiredHeldIds = $slots
+                ->filter(fn ($slot) =>
+                    $slot->status === 'held'
+                    && (! $slot->held_until || $slot->held_until->lte(now()))
+                )
+                ->pluck('id');
+
+            if ($expiredHeldIds->isNotEmpty()) {
+                TimeSlot::whereIn('id', $expiredHeldIds)->update([
+                    'status' => 'available',
+                    'held_by_booking_id' => null,
+                    'held_until' => null,
+                ]);
+
+                $slots = TimeSlot::whereIn('id', $timeSlotIds)
+                    ->where('resource_id', $resourceId)
+                    ->lockForUpdate()
+                    ->get();
+            }
+
             $notAvailable = $slots->firstWhere('status', '!=', 'available');
             if ($notAvailable) {
-                throw new RuntimeException('Slot sudah dipesan oleh orang lain.');
+                throw new RuntimeException('Slot baru saja diambil customer lain. Silakan pilih slot lain.');
             }
 
             $totalPrice = $slots->sum('price');

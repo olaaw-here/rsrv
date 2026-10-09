@@ -20,12 +20,22 @@ class BookingResource extends JsonResource
             'status'         => $this->status,
             'total_price'    => (float) $this->total_price,
             'customer_notes' => $this->customer_notes,
+            'cancellation_reason' => $this->cancellation_reason,
             'expires_at'     => $this->expires_at,
             'confirmed_at'   => $this->confirmed_at,
             'resource' => [
                 'id'   => $this->resource?->id,
                 'name' => $this->resource?->name,
                 'type' => $this->resource?->type,
+                'category' => [
+                    'id' => $this->resource?->category?->id,
+                    'name' => $this->resource?->category?->name,
+                ],
+                'provider' => [
+                    'id' => $this->resource?->provider?->id,
+                    'business_name' => $this->resource?->provider?->business_name,
+                    'city' => $this->resource?->provider?->city,
+                ],
             ],
             'slots' => $this->whenLoaded('bookingSlots', fn () => $this->bookingSlots->map(fn ($bs) => [
                 'time_slot_id'   => $bs->time_slot_id,
@@ -34,6 +44,12 @@ class BookingResource extends JsonResource
                 'end_time'       => substr($bs->timeSlot?->end_time ?? '', 0, 5),
                 'price_snapshot' => (float) $bs->price_snapshot,
             ])),
+            'review' => $this->whenLoaded('review', fn () => $this->review ? [
+                'id' => $this->review->id,
+                'rating' => (int) $this->review->rating,
+                'comment' => $this->review->comment,
+                'created_at' => $this->review->created_at,
+            ] : null),
             'payment' => $this->whenLoaded('payments', function () {
                 $latest = $this->payments->sortByDesc('created_at')->first();
 
