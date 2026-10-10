@@ -136,11 +136,29 @@ function hoursForm(resourceId) {
                 const existing = await apiFetch('/provider/resources/' + this.resourceId + '/hours');
                 const byDay = Object.fromEntries(existing.map(h => [h.day_of_week, h]));
 
-                this.hours = [0, 1, 2, 3, 4, 5, 6].map(day => byDay[day] || {
-                    day_of_week: day,
-                    open_time: '08:00',
-                    close_time: '20:00',
-                    is_closed: false,
+                const timeForInput = value => {
+                    if (!value) return '';
+                    // API/database may return HH:mm:ss; <input type=time> needs HH:mm.
+                    return String(value).slice(0, 5);
+                };
+
+                this.hours = [0, 1, 2, 3, 4, 5, 6].map(day => {
+                    const saved = byDay[day];
+                    if (!saved) {
+                        return {
+                            day_of_week: day,
+                            open_time: '08:00',
+                            close_time: '20:00',
+                            is_closed: false,
+                        };
+                    }
+
+                    return {
+                        ...saved,
+                        open_time: timeForInput(saved.open_time),
+                        close_time: timeForInput(saved.close_time),
+                        is_closed: Boolean(Number(saved.is_closed)),
+                    };
                 });
             } catch (e) {
                 if (e.status === 401) {
@@ -158,7 +176,14 @@ function hoursForm(resourceId) {
             try {
                 await apiFetch('/provider/resources/' + this.resourceId + '/hours', {
                     method: 'PUT',
-                    body: { hours: this.hours },
+                    body: {
+                        hours: this.hours.map(hour => ({
+                            ...hour,
+                            open_time: hour.is_closed ? null : String(hour.open_time || '').slice(0, 5),
+                            close_time: hour.is_closed ? null : String(hour.close_time || '').slice(0, 5),
+                            is_closed: Boolean(hour.is_closed),
+                        })),
+                    },
                 });
                 alert('Jam operasional tersimpan.');
             } catch (e) {

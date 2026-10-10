@@ -80,6 +80,12 @@ class Booking extends Model
         array $timeSlotIds,
         int $holdMinutes = 15
     ): self {
+        $timeSlotIds = array_values(array_unique(array_map('intval', $timeSlotIds)));
+
+        if ($timeSlotIds === []) {
+            throw new RuntimeException('Pilih minimal satu slot.');
+        }
+
         return DB::transaction(function () use ($userId, $resourceId, $timeSlotIds, $holdMinutes) {
             $slots = TimeSlot::whereIn('id', $timeSlotIds)
                 ->where('resource_id', $resourceId)
@@ -161,19 +167,87 @@ class Booking extends Model
     }
 
     /**
-     * Konfirmasi booking setelah pembayaran berhasil (dipanggil dari
-     * webhook handler, idealnya sudah lolos pengecekan idempotency).
+     * Konfirmasi booking setelah pembayaran berhasil (dipanggil dari webhook
+     * handler atau konfirmasi manual provider).
+     *
+     * Aman terhadap kondisi balapan: booking dikunci, statusnya harus masih
+     * pending_payment, dan SEMUA slot miliknya harus masih ditahan oleh
+     * booking ini. Jika tidak, slot sudah dilepas/diambil orang lain dan
+     * konfirmasi ditolak (bukan diam-diam menghasilkan booking tanpa slot).
+     *
+     * @throws RuntimeException
      */
     public function confirm(): void
     {
         DB::transaction(function () {
-            $this->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+            $locked = static::whereKey($this->id)->lockForUpdate()->firstOrFail();
 
-            TimeSlot::where('held_by_booking_id', $this->id)->update([
+            if ($locked->status !== 'pending_payment') {
+                throw new RuntimeException('Booking tidak dalam status menunggu pembayaran.');
+            }
+
+            $expected = $locked->bookingSlots()->count();
+            $held = TimeSlot::where('held_by_booking_id', $locked->id)
+                ->where('status', 'held')
+                ->lockForUpdate()
+                ->count();
+
+            if ($expected === 0 || $held !== $expected) {
+                throw new RuntimeException('Slot booking sudah dilepas atau diambil pihak lain.');
+            }
+
+            $locked->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+
+            TimeSlot::where('held_by_booking_id', $locked->id)->update([
                 'status' => 'booked',
                 'held_until' => null,
             ]);
         });
+
+        $this->refresh();
+    }
+
+    /**
+     * Dipakai ketika pembayaran masuk SETELAH booking expired/cancelled.
+     * Jika semua slot masih available, slot diambil kembali dan booking
+     * dikonfirmasi. Jika sudah diambil orang lain, kembalikan false agar
+     * pemanggil bisa menandai pembayaran ini untuk di-refund.
+     */
+    public function reclaimSlots(): bool
+    {
+        $reclaimed = DB::transaction(function () {
+            $locked = static::whereKey($this->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($locked->status, ['expired', 'cancelled'], true)) {
+                return false;
+            }
+
+            $slotIds = $locked->bookingSlots()->pluck('time_slot_id');
+            if ($slotIds->isEmpty()) {
+                return false;
+            }
+
+            $slots = TimeSlot::whereIn('id', $slotIds)->lockForUpdate()->get();
+
+            if ($slots->count() !== $slotIds->count()
+                || $slots->contains(fn ($slot) => $slot->status !== 'available')) {
+                return false;
+            }
+
+            TimeSlot::whereIn('id', $slotIds)->update([
+                'status' => 'booked',
+                'held_by_booking_id' => $locked->id,
+                'held_until' => null,
+            ]);
+
+            $locked->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+
+            return true;
+        });
+
+        $this->refresh();
+
+        return $reclaimed;
     }
 
     /**

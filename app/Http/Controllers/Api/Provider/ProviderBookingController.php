@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Services\NotificationService;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * ProviderBookingController — Manajemen booking yang masuk ke resource provider.
@@ -22,8 +24,10 @@ use Illuminate\Validation\Rule;
  */
 class ProviderBookingController extends Controller
 {
-    public function __construct(protected NotificationService $notificationService)
-    {
+    public function __construct(
+        protected NotificationService $notificationService,
+        protected PaymentService $paymentService
+    ) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -52,7 +56,7 @@ class ProviderBookingController extends Controller
             ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->to))
             ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($this->perPage($request, 15));
 
         return response()->json([
             'data' => BookingResource::collection($bookings->items()),
@@ -100,7 +104,21 @@ class ProviderBookingController extends Controller
             ], 422);
         }
 
-        $booking->confirm();
+        $pendingPayments = $booking->payments()->where('status', 'pending')->get();
+
+        try {
+            $booking->confirm();
+        } catch (RuntimeException $e) {
+            // Mis. hold sudah kedaluwarsa dan slot diambil customer lain.
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+
+        // Booking sudah dikonfirmasi manual: tutup percobaan bayar online agar
+        // customer tidak membayar dua kali.
+        $booking->payments()->where('status', 'pending')->update(['status' => 'cancel']);
+        foreach ($pendingPayments as $payment) {
+            $this->paymentService->cancelGatewayTransaction($payment);
+        }
 
         $this->notificationService->send(
             $booking->user,
@@ -169,14 +187,35 @@ class ProviderBookingController extends Controller
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
-        // Lepas slot & set status cancelled
-        $booking->releaseSlots('cancelled');
-
-        // Batalkan payment yang pending jika ada
-        $booking->payments()->where('status', 'pending')->update(['status' => 'cancel']);
-
         $reason = $validated['reason'];
-        $booking->update(['cancellation_reason' => $reason]);
+
+        // Atomik: status, alasan, payment pending, dan slot berubah bersama-sama.
+        $result = DB::transaction(function () use ($booking, $reason) {
+            $locked = Booking::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== 'pending_payment') {
+                return null;
+            }
+
+            $pending = $locked->payments()->where('status', 'pending')->get();
+            $locked->payments()->where('status', 'pending')->update(['status' => 'cancel']);
+            $locked->update(['cancellation_reason' => $reason]);
+            $locked->releaseSlots('cancelled');
+
+            return [$locked, $pending];
+        });
+
+        if ($result === null) {
+            return response()->json([
+                'message' => 'Hanya booking berstatus pending_payment yang dapat ditolak.',
+            ], 422);
+        }
+
+        [$booking, $pendingPayments] = $result;
+
+        foreach ($pendingPayments as $payment) {
+            $this->paymentService->cancelGatewayTransaction($payment);
+        }
 
         $this->notificationService->send(
             $booking->user,

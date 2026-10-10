@@ -22,7 +22,7 @@ class RefundController extends Controller
         $refunds = Refund::with(['payment.booking.user', 'payment.booking.resource', 'processedBy'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($this->perPage($request, 15));
 
         return response()->json([
             'data' => $refunds->items(),

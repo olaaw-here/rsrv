@@ -20,6 +20,27 @@ class OperationalHourController extends Controller
     {
         $this->authorizeOwnership($request, $resource);
 
+        // MySQL TIME values are commonly serialized as HH:mm:ss, while the
+        // browser time input and API validation use HH:mm. Normalize incoming
+        // values before validation so existing database values work as well.
+        $hoursInput = $request->input('hours', []);
+        if (is_array($hoursInput)) {
+            foreach ($hoursInput as $index => $hourInput) {
+                if (! is_array($hourInput)) {
+                    continue;
+                }
+
+                foreach (['open_time', 'close_time'] as $field) {
+                    $time = $hourInput[$field] ?? null;
+                    if (is_string($time) && preg_match('/^\d{2}:\d{2}:\d{2}$/', $time)) {
+                        $hoursInput[$index][$field] = substr($time, 0, 5);
+                    }
+                }
+            }
+
+            $request->merge(['hours' => $hoursInput]);
+        }
+
         $validated = $request->validate([
             'hours'                    => ['required', 'array', 'size:7'],
             'hours.*.day_of_week'      => ['required', 'integer', 'between:0,6', 'distinct'],

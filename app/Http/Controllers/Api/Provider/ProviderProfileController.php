@@ -80,7 +80,7 @@ class ProviderProfileController extends Controller
                 fn ($q) => $q->where('status', $request->status)
             )
             ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($this->perPage($request, 15));
 
         return response()->json([
             'data' => ResourceResource::collection($resources->items()),
@@ -108,7 +108,7 @@ class ProviderProfileController extends Controller
             ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->to))
             ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($this->perPage($request, 15));
 
         return response()->json([
             'data' => BookingResource::collection($bookings->items()),

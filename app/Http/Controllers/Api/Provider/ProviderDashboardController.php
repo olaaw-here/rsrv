@@ -43,7 +43,7 @@ class ProviderDashboardController extends Controller
             ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->to))
             ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($this->perPage($request, 15));
 
         return response()->json([
             'data' => BookingResource::collection($bookings->items()),
@@ -84,10 +84,12 @@ class ProviderDashboardController extends Controller
             $out = fopen('php://output', 'w');
             fputcsv($out, ['Booking Code', 'Resource', 'Customer', 'Status', 'Total', 'Created At']);
             foreach ($bookings as $booking) {
-                fputcsv($out, [
-                    $booking->booking_code, $booking->resource->name, $booking->user->name,
+                // Nama resource/customer diisi pengguna: netralkan sel yang bisa
+                // dieksekusi sebagai formula saat CSV dibuka di Excel/Sheets.
+                fputcsv($out, array_map($this->csvSafe(...), [
+                    $booking->booking_code, $booking->resource?->name, $booking->user?->name,
                     $booking->status, $booking->total_price, $booking->created_at?->toDateTimeString(),
-                ]);
+                ]));
             }
             fclose($out);
         }, 'bookings.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
@@ -108,11 +110,24 @@ class ProviderDashboardController extends Controller
 
         $occupancy = $resource->timeSlots()
             ->whereBetween('slot_date', [$validated['from'], $validated['to']])
-            ->selectRaw('slot_date, COUNT(*) as total_slot, SUM(CASE WHEN status = "booked" THEN 1 ELSE 0 END) as slot_terisi')
+            ->selectRaw('slot_date, COUNT(*) as total_slot, SUM(CASE WHEN status = \'booked\' THEN 1 ELSE 0 END) as slot_terisi')
             ->groupBy('slot_date')
             ->orderBy('slot_date')
             ->get();
 
         return response()->json($occupancy);
+    }
+
+    /**
+     * Cegah CSV/formula injection: sel yang diawali = + - @ (atau tab/CR)
+     * diberi awalan tanda kutip agar dibaca sebagai teks biasa.
+     */
+    protected function csvSafe(mixed $value): mixed
+    {
+        if (is_string($value) && $value !== '' && preg_match('/^[=+\-@\t\r]/', $value)) {
+            return "'" . $value;
+        }
+
+        return $value;
     }
 }

@@ -54,7 +54,7 @@ class BookingRaceConditionTest extends TestCase
         Booking::bookSlots($userA->id, $this->resource->id, [$this->slot->id]);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Slot sudah dipesan oleh orang lain.');
+        $this->expectExceptionMessage('Slot baru saja diambil customer lain. Silakan pilih slot lain.');
 
         Booking::bookSlots($userB->id, $this->resource->id, [$this->slot->id]);
     }

@@ -26,7 +26,7 @@ class StoreBookingRequest extends FormRequest
     {
         return [
             'resource_id' => ['required', 'integer', 'exists:resources,id'],
-            'time_slot_ids' => ['required', 'array', 'min:1', 'exists:time_slots,id'],
+            'time_slot_ids' => ['required', 'array', 'min:1', 'max:24'],
             'time_slot_ids.*' => ['integer', 'distinct', 'exists:time_slots,id'],
             'customer_notes' => ['nullable', 'string', 'max:1000'],
         ];
@@ -37,7 +37,8 @@ class StoreBookingRequest extends FormRequest
         return [
             'time_slot_ids.required' => 'At least one time slot must be selected.',
             'time_slot_ids.min' => 'At least one time slot must be selected.',
-            'time_slot_ids.exists' => 'One or more selected time slots are invalid.',
+            'time_slot_ids.max' => 'You can book at most 24 time slots at once.',
+            'time_slot_ids.*.exists' => 'One or more selected time slots are invalid.',
             'time_slot_ids.*.distinct' => 'Duplicate time slots are not allowed.',
         ];
     }

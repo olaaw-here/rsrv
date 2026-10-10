@@ -113,10 +113,13 @@ class BookingTest extends TestCase
         );
 
         $response = $this->actingAs($this->customer, 'sanctum')
-            ->postJson("/api/bookings/{$booking->id}/cancel");
+            ->postJson("/api/bookings/{$booking->id}/cancel", [
+                'reason' => 'Jadwal berubah',
+            ]);
 
         $response->assertOk()
-            ->assertJsonPath('status', 'cancelled');
+            ->assertJsonPath('status', 'cancelled')
+            ->assertJsonPath('cancellation_reason', 'Jadwal berubah');
 
         $this->assertDatabaseHas('time_slots', [
             'id' => $this->slot->id,
@@ -138,7 +141,7 @@ class BookingTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Booking hanya dapat dibatalkan sebelum pembayaran berhasil.');
 
-        app(BookingService::class)->cancel($booking->fresh());
+        app(BookingService::class)->cancel($booking->fresh(), 'Ingin membatalkan');
     }
 
     public function test_overdue_pending_booking_is_expired_and_releases_slot(): void

@@ -14,7 +14,7 @@ class NotificationController extends Controller
     {
         $notifications = $request->user()->appNotifications()
             ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($this->perPage($request, 15));
 
         return response()->json([
             'data' => NotificationResource::collection($notifications->items()),

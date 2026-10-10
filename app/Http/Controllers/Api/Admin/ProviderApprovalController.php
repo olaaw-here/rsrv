@@ -19,7 +19,7 @@ class ProviderApprovalController extends Controller
                 fn ($query) => $query->where('status', $request->status))
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 WHEN 'suspended' THEN 2 ELSE 3 END")
             ->latest()
-            ->paginate(min(max($request->integer('per_page', 20), 1), 100));
+            ->paginate(min(max($this->perPage($request, 20), 1), 100));
 
         return response()->json([
             'data' => $providers->getCollection()->map(fn (ProviderProfile $profile) => [

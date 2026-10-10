@@ -26,7 +26,7 @@
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     {{-- Midtrans Snap.js --}}
-    <script src="https://app.sandbox.midtrans.com/snap/snap.js"
+    <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
             data-client-key="{{ config('services.midtrans.client_key') }}"></script>
 
     <style>
@@ -50,7 +50,7 @@
             </a>
 
             {{-- Nav tengah --}}
-            <nav class="hidden md:flex items-center gap-1">
+            <!-- <nav class="hidden md:flex items-center gap-1">
                 <a href="{{ url('/resources') }}"
                    class="nav-link {{ request()->is('resources*') ? 'active' : '' }}">
                    🔍 Cari Layanan
@@ -61,7 +61,7 @@
                        📋 Booking Saya
                     </a>
                 </template>
-            </nav>
+            </nav> -->
 
             {{-- User area --}}
             <div class="flex items-center gap-3">
@@ -146,7 +146,7 @@
     <footer class="bg-white border-t border-slate-100 mt-auto">
         <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
             <span>© {{ date('Y') }} RSRV — Platform Booking Layanan</span>
-            <span>Made by Olaaw</span>
+            <span>Dibuat oleh Ol</span>
         </div>
     </footer>
 

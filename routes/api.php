@@ -28,8 +28,8 @@ use App\Http\Controllers\Api\Admin\RefundController;
 // =========================================================================
 // AUTH (public)
 // =========================================================================
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login',    [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
+Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:auth');
 Route::post('/logout',   [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/me',        [AuthController::class, 'me'])->middleware('auth:sanctum');
 
@@ -46,7 +46,6 @@ Route::get('/resources/{resource}', [ResourceController::class, 'show']);   // d
 Route::get('/resources/{resource}/slots', [TimeSlotController::class, 'index']);
 // contoh query: GET /api/resources/12/slots?date=2026-09-15
 
-// tes ombak
 // =========================================================================
 // PAYMENT GATEWAY WEBHOOK (public, tapi wajib verifikasi signature)
 // =========================================================================
@@ -138,8 +137,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // ── Dashboard Rekap ───────────────────────────────────────────────────
         Route::get('/dashboard/summary',                     [ProviderDashboardController::class, 'summary']);
         Route::get('/dashboard/bookings',                    [ProviderDashboardController::class, 'bookings']);
-        Route::get('/dashboard/bookings/{booking}',          [ProviderDashboardController::class, 'showBooking']);
+        // 'export' HARUS didaftarkan sebelum '{booking}', kalau tidak 'export'
+        // ikut tertangkap sebagai ID booking.
         Route::get('/dashboard/bookings/export',             [ProviderDashboardController::class, 'exportBookings']);
+        Route::get('/dashboard/bookings/{booking}',          [ProviderDashboardController::class, 'showBooking'])->whereNumber('booking');
         Route::get('/resources/{resource}/occupancy',        [ProviderDashboardController::class, 'occupancy']);
     });
 });

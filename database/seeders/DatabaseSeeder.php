@@ -23,6 +23,14 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Seeder ini membuat akun demo (termasuk admin) dengan password "password".
+        // JANGAN pernah dijalankan di production; buat admin lewat
+        // `php artisan app:create-admin`.
+        if (app()->isProduction()) {
+            $this->command?->error('DatabaseSeeder dinonaktifkan di production. Gunakan: php artisan app:create-admin');
+            return;
+        }
+
         $password = Hash::make('password');
 
         // -------------------------------------------------------------

@@ -21,6 +21,9 @@ class TimeSlotController extends Controller
     {
         $request->validate(['date' => ['required', 'date']]);
 
+        // Normalisasi ke Y-m-d agar input seperti "2026-10-12T00:00" tetap cocok.
+        $date = Carbon::parse($request->date)->toDateString();
+
         abort_unless(
             $resource->status === 'active'
                 && $resource->provider?->status === 'active',
@@ -30,7 +33,7 @@ class TimeSlotController extends Controller
         // Hold yang sudah lewat harus kembali terlihat sebagai available,
         // walaupun scheduler belum sempat menjalankan expiry job.
         TimeSlot::where('resource_id', $resource->id)
-            ->whereDate('slot_date', $request->date)
+            ->whereDate('slot_date', $date)
             ->where('status', 'held')
             ->where(function ($q) {
                 $q->whereNull('held_until')
@@ -43,7 +46,7 @@ class TimeSlotController extends Controller
             ]);
 
         $slots = $resource->timeSlots()
-            ->forDate($request->date)
+            ->forDate($date)
             ->whereIn('status', ['available', 'booked', 'blocked'])
             ->orderBy('start_time')
             ->get();
@@ -65,13 +68,28 @@ class TimeSlotController extends Controller
             'to'   => ['required', 'date', 'after_or_equal:from'],
         ]);
 
+        $from = Carbon::parse($validated['from'])->startOfDay();
+        $to = Carbon::parse($validated['to'])->startOfDay();
+
+        // Batasi rentang agar satu request tidak menghasilkan puluhan ribu query.
+        if ($from->diffInDays($to) > 92) {
+            throw ValidationException::withMessages([
+                'to' => 'Rentang generate slot maksimal 92 hari.',
+            ]);
+        }
+
         $hours = $resource->operationalHours->keyBy('day_of_week');
         $duration = $resource->slot_duration_minutes;
         $created = 0;
 
-        $period = Carbon::parse($validated['from'])->toPeriod($validated['to']);
+        $period = $from->toPeriod($to);
 
         foreach ($period as $date) {
+            // Jangan membuat slot di tanggal yang sudah lewat.
+            if ($date->lt(today())) {
+                continue;
+            }
+
             $dayHour = $hours->get($date->dayOfWeek);
 
             if (! $dayHour || $dayHour->is_closed || ! $dayHour->open_time || ! $dayHour->close_time) {

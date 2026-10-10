@@ -19,6 +19,7 @@
                         <span class="text-xs text-slate-400">RSRV</span>
                     </div>
 
+```
                 <h1 class="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                     Admin Dashboard
                 </h1>
@@ -467,7 +468,7 @@
 
     </div>
 </main>
-
+```
 
 </div>
 

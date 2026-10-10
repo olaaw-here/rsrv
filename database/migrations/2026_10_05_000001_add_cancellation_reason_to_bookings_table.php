@@ -8,11 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Guard supaya aman dijalankan ulang di database yang kolomnya sudah ada.
-        if (Schema::hasColumn('bookings', 'cancellation_reason')) {
-            return;
-        }
-
         Schema::table('bookings', function (Blueprint $table) {
             $table->string('cancellation_reason', 500)->nullable()->after('customer_notes');
         });
@@ -20,10 +15,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (! Schema::hasColumn('bookings', 'cancellation_reason')) {
-            return;
-        }
-
         Schema::table('bookings', function (Blueprint $table) {
             $table->dropColumn('cancellation_reason');
         });

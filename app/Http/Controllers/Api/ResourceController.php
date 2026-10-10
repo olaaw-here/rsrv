@@ -21,7 +21,7 @@ class ResourceController extends Controller
             ->when($request->filled('city'), fn ($q) => $q->whereHas('provider', fn ($q) => $q->where('city', 'like', '%' . $request->city . '%')))
             ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%' . $request->search . '%'));
 
-        $resources = $query->paginate($request->integer('per_page', 15));
+        $resources = $query->paginate($this->perPage($request, 15));
 
         return response()->json([
             'data'  => ResourceResource::collection($resources->items()),

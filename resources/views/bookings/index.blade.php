@@ -113,9 +113,12 @@ function bookingList() {
             } catch(e){alert(e.message);}
         },
         async cancel(b) {
-            if(!confirm('Batalkan booking ini?'))return;
-            try {await apiFetch('/bookings/'+b.id+'/cancel',{method:'POST'});await this.load();}
-            catch(e){alert(e.message);}
+            // API mewajibkan alasan pembatalan.
+            const reason = prompt('Alasan pembatalan booking ini:');
+            if (reason === null) return;
+            if (!reason.trim()) { alert('Alasan pembatalan wajib diisi.'); return; }
+            try {await apiFetch('/bookings/'+b.id+'/cancel',{method:'POST',body:{reason:reason.trim()}});await this.load();}
+            catch(e){alert(e.data?.errors ? Object.values(e.data.errors).flat().join('\n') : e.message);}
         }
     };
 }

@@ -117,7 +117,8 @@ class ReviewTest extends TestCase
                 'rating' => 5,
             ]);
 
-        $response->assertForbidden();
+        // Booking milik sendiri tapi belum selesai -> 422 (bukan 403).
+        $response->assertUnprocessable();
         $this->assertDatabaseCount('reviews', 0);
     }
 
@@ -149,7 +150,8 @@ class ReviewTest extends TestCase
                 'comment' => 'Review kedua.',
             ]);
 
-        $response->assertForbidden();
+        // Review ganda -> 409 Conflict.
+        $response->assertStatus(409);
         $this->assertDatabaseCount('reviews', 1);
     }
 

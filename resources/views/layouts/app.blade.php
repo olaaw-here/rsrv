@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
-    {{-- Midtrans Snap.js (sandbox). Ganti ke app.midtrans.com untuk production. --}}
-    <script src="https://app.sandbox.midtrans.com/snap/snap.js"
+    {{-- Midtrans Snap.js: sandbox/production otomatis mengikuti MIDTRANS_IS_PRODUCTION. --}}
+    <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
             data-client-key="{{ config('services.midtrans.client_key') }}"></script>
 
     <style>[x-cloak] { display: none !important; }</style>
