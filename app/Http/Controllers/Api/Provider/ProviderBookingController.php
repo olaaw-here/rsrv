@@ -207,7 +207,7 @@ class ProviderBookingController extends Controller
 
         if ($result === null) {
             return response()->json([
-                'message' => 'Hanya booking berstatus pending_payment yang dapat ditolak.',
+                'message' => 'Hanya booking berstatus pending payment yang dapat ditolak.',
             ], 422);
         }
 

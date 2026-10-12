@@ -49,7 +49,7 @@ function bookingList() {
         bookingDate(b) {
             const s = (b.booking_slots || [])[0]?.time_slot || {};
             return s.date
-                ? ${s.date} ·  - 
+                ? `${s.date} - `
                 : 'Jadwal belum tersedia';
         },
 

@@ -96,6 +96,7 @@
                                     <p class="text-slate-400 text-xs" x-text="user ? user.email : ''"></p>
                                 </div>
                                 <a href="{{ url('/bookings') }}" class="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50">📋 Booking Saya</a>
+                                <a href="{{ url('/resources') }}" class="flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50"> 🔍 Cari Resource</a>
                                 <hr class="border-slate-100">
                                 <button @click="logout()" class="w-full text-left flex items-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50">🚪 Logout</button>
                             </div>
